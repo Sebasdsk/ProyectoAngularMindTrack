@@ -1,12 +1,8 @@
 /* You can add global styles to this file, and also import other style files */
+
 @import "tailwindcss";
 
-/* Estilos globales */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
