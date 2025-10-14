@@ -1,0 +1,55 @@
+<!-- NAVBAR DESKTOP - Top horizontal -->
+<nav class="hidden md:block bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+
+      <!-- Logo y Título -->
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <h1 class="text-2xl font-bold text-green-600">MindTrack</h1>
+        </div>
+      </div>
+
+      <!-- Menú de Navegación Desktop -->
+      <div class="flex items-center space-x-2">
+        @for (item of navItems; track item.path) {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="bg-green-600 text-white"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+                   text-gray-700 hover:bg-green-50 hover:text-green-700
+                   transition-all duration-200"
+          >
+            <span class="text-lg">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </a>
+        }
+      </div>
+
+    </div>
+  </div>
+</nav>
+
+<!-- NAVBAR MOBILE - Bottom navigation bar -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+  <div class="max-w-md mx-auto">
+    <div class="flex justify-around items-center h-16">
+
+      @for (item of navItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="text-green-600 bg-green-50"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="flex flex-col items-center justify-center flex-1 h-full
+                 text-gray-600 hover:text-green-600 hover:bg-green-50
+                 transition-all duration-200"
+        >
+          <span class="text-xl mb-1">{{ item.icon }}</span>
+          <span class="text-xs font-medium">{{ item.label }}</span>
+        </a>
+      }
+
+    </div>
+  </div>
+</nav>
