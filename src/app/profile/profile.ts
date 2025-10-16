@@ -1,8 +1,9 @@
 import { Component } from '@angular/core';
+import { Register } from "../register/register";
 
 @Component({
   selector: 'app-profile',
-  imports: [],
+  imports: [Register],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })

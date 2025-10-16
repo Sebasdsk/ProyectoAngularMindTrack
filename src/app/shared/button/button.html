@@ -1,0 +1,19 @@
+<button
+  [type]="type()"
+  [class]="buttonClasses()"
+  [disabled]="disabled() || loading()"
+  (click)="onClick()">
+
+  @if (icon(); as iconValue) {
+    @if (!loading()) {
+      <span class="icon">{{ iconValue }} </span>
+    }
+  }
+
+  @if (loading()) {
+    <span class="animate-spin">🔁</span>
+  }
+  <span class="content">
+    <ng-content></ng-content>
+  </span>
+</button>
