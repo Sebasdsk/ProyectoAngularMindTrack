@@ -1,0 +1,66 @@
+<div class="input-wrapper">
+
+  <!-- Label -->
+  @if (label()) {
+    <label [for]="id" class="block text-sm font-medium text-gray-700 mb-1">
+      {{ label() }}
+      @if (required()) {
+        <span class="text-red-500">*</span>
+      }
+    </label>
+  }
+
+  <!-- Input Container -->
+  <div class="relative">
+
+    <!-- Icon (left) -->
+    @if (icon()) {
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <span class="text-gray-400 text-lg">{{ icon() }}</span>
+      </div>
+    }
+
+    <!-- Input -->
+    <input
+      [id]="id"
+      [type]="getInputType()"
+      [(ngModel)]="value"
+      [attr.aria-labelledby]="id"
+      placeholder="{{ placeholder() }}"
+      [attr.aria-label]="label() || placeholder()"
+      title="{{ label() || placeholder() }}"
+      [disabled]="disabled()"
+      [required]="required()"
+      [class]="[
+        'w-full px-4 py-3 bg-white border-2 rounded-xl',
+        'focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent',
+        'transition-all duration-200 text-gray-700 placeholder-gray-400',
+        'disabled:bg-gray-100 disabled:cursor-not-allowed',
+        error() ? 'border-red-500' : 'border-gray-200',
+        icon() ? 'pl-10' : '',
+        type() === 'password' ? 'pr-10' : ''
+      ].join(' ')"
+    />
+
+    <!-- Password Toggle -->
+    @if (type() === 'password') {
+      <button
+        type="button"
+        (click)="togglePasswordVisibility()"
+        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+        @if (showPassword()) {
+          <span class="text-xl">👁️</span>
+        } @else {
+          <span class="text-xl">🙈</span>
+        }
+      </button>
+    }
+
+  </div>
+
+  <!-- Error Message -->
+  @if (error()) {
+    <p class="text-red-500 text-sm mt-1">{{ error() }}</p>
+  }
+
+</div>
