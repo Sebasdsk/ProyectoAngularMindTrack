@@ -1,0 +1,51 @@
+<div class="p-8 bg-gray-50 min-h-screen">
+  <h1 class="text-4xl font-bold mb-8 text-gray-800">Página de Prueba de Componentes</h1>
+
+  <section class="mb-10">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Botones (app-button)</h2>
+    <app-card>
+      <div class="flex items-center space-x-4 p-4">
+        <app-button (click)="onButtonClick()">Botón Primario</app-button>
+        </div>
+    </app-card>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Inputs (app-input)</h2>
+    <app-card>
+      <div class="p-4 space-y-6">
+        <app-input label="Nombre de Usuario" placeholder="Escribe tu nombre" [(value)]="testInputValue"></app-input>
+
+        <app-input
+          label="Contraseña"
+          type="password"
+          placeholder="Escribe tu contraseña"
+          [required]="true"
+          [(value)]="testPasswordValue"
+          [error]="testError()">
+        </app-input>
+
+        <app-input label="Campo Deshabilitado" placeholder="No puedes escribir aquí" [disabled]="true"></app-input>
+      </div>
+    </app-card>
+  </section>
+
+  <section class="mb-10">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-700">Tarjetas (app-card)</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <app-card>
+            <div class="p-6">
+                <h3 class="text-lg font-bold">Entrada de Diario</h3>
+                <p class="text-gray-600 mt-2">Hoy fue un buen día. Me sentí productivo y logré completar una tarea importante...</p>
+            </div>
+        </app-card>
+        <app-card>
+            <div class="p-6">
+                <h3 class="text-lg font-bold">Tarea Pendiente</h3>
+                <p class="text-gray-600 mt-2">Crear la página de prueba para los componentes de Angular.</p>
+            </div>
+        </app-card>
+    </div>
+  </section>
+
+</div>
