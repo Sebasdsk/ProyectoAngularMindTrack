@@ -1,0 +1,171 @@
+<!-- src/app/dashboard/dashboard.html -->
+<div class="p-4 md:p-6 space-y-6 animate-fadeIn">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+      ¡Bienvenido de vuelta! 👋
+    </h1>
+    <p class="text-gray-600">
+      Aquí está tu resumen de bienestar
+    </p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+    <!-- Racha Actual -->
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="flex flex-col items-center text-center">
+        <div class="text-4xl mb-2">🔥</div>
+        <p class="text-3xl font-bold text-orange-600">{{ currentStreak() }}</p>
+        <p class="text-xs text-gray-600 mt-1">días de racha</p>
+      </div>
+    </app-card>
+
+    <!-- Emociones Registradas -->
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="flex flex-col items-center text-center">
+        <div class="text-4xl mb-2">❤️</div>
+        <p class="text-3xl font-bold text-red-600">{{ totalEmotions() }}</p>
+        <p class="text-xs text-gray-600 mt-1">emociones</p>
+      </div>
+    </app-card>
+
+    <!-- Tareas Completadas -->
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="flex flex-col items-center text-center">
+        <div class="text-4xl mb-2">✅</div>
+        <p class="text-3xl font-bold text-green-600">{{ completionRate() }}%</p>
+        <p class="text-xs text-gray-600 mt-1">completado</p>
+      </div>
+    </app-card>
+
+    <!-- Tiempo de Enfoque -->
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="flex flex-col items-center text-center">
+        <div class="text-4xl mb-2">⏱️</div>
+        <p class="text-3xl font-bold text-blue-600">{{ focusTime() }}</p>
+        <p class="text-xs text-gray-600 mt-1">min enfocado</p>
+      </div>
+    </app-card>
+
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Distribución de Emociones -->
+    <app-card [padding]="'lg'">
+      <div header>
+        <h2 class="text-xl font-semibold text-gray-900">
+          Distribución de Emociones
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">Últimos 30 días</p>
+      </div>
+
+      <div class="space-y-4">
+        @for (stat of emotionStats(); track stat.emotion) {
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">{{ stat.emoji }}</span>
+                <span class="text-sm font-medium text-gray-700">{{ stat.emotion }}</span>
+              </div>
+              <span class="text-sm text-gray-600">{{ stat.count }} veces</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                [class]="stat.color + ' h-full rounded-full transition-all duration-500'"
+                [style.width.%]="stat.percentage">
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </app-card>
+
+    <!-- Progreso de Tareas -->
+    <app-card [padding]="'lg'">
+      <div header>
+        <h2 class="text-xl font-semibold text-gray-900">
+          Progreso de Tareas
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">Esta semana</p>
+      </div>
+
+      <div class="flex items-center justify-center py-8">
+        <div class="relative w-48 h-48">
+          <!-- Circle Progress -->
+          <svg class="w-full h-full transform -rotate-90">
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              stroke="currentColor"
+              stroke-width="12"
+              fill="none"
+              class="text-gray-200"
+            />
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              stroke="currentColor"
+              stroke-width="12"
+              fill="none"
+              [attr.stroke-dasharray]="2 * 3.14159 * 88"
+              [attr.stroke-dashoffset]="2 * 3.14159 * 88 * (1 - completionRate() / 100)"
+              class="text-green-600 transition-all duration-500"
+            />
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-4xl font-bold text-gray-900">{{ completionRate() }}%</span>
+            <span class="text-sm text-gray-600 mt-1">Completado</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center text-sm text-gray-600">
+        <p>{{ tasksCompleted() }} de {{ totalTasks() }} tareas completadas</p>
+      </div>
+    </app-card>
+
+  </div>
+
+  <!-- Recent Journal Entries -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900">
+            Entradas Recientes del Diario
+          </h2>
+          <p class="text-sm text-gray-600 mt-1">Tus últimas reflexiones</p>
+        </div>
+        <a
+          routerLink="/diary"
+          class="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
+          Ver todas →
+        </a>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      @for (entry of recentJournalEntries(); track entry.id) {
+        <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-medium text-gray-900 mb-1">{{ entry.title }}</h3>
+              <p class="text-sm text-gray-600 line-clamp-2">{{ entry.preview }}</p>
+            </div>
+            <app-badge [variant]="'neutral'" [size]="'sm'">
+              {{ formatDate(entry.date) }}
+            </app-badge>
+          </div>
+        </div>
+      }
+    </div>
+  </app-card>
+
+</div>

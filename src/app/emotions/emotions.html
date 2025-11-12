@@ -1,0 +1,128 @@
+<!-- src/app/emotions/emotions.html -->
+<div class="p-4 md:p-6 space-y-6 animate-fadeIn">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+      ¿Cómo te sientes hoy? 💭
+    </h1>
+    <p class="text-gray-600">
+      Registra tus emociones para entender mejor tu bienestar
+    </p>
+  </div>
+
+  <!-- Registro de Emoción -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Registra tu emoción actual
+      </h2>
+    </div>
+
+    <!-- Selector de Emociones -->
+    <div class="mb-6">
+      <p class="text-sm font-medium text-gray-700 mb-3">
+        Selecciona cómo te sientes:
+      </p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        @for (emotion of emotions; track emotion.id) {
+          <button
+            (click)="selectEmotion(emotion)"
+            [class]="[
+              'p-4 rounded-xl border-2 transition-all duration-200',
+              'hover:scale-105 active:scale-95',
+              'flex flex-col items-center gap-2',
+              selectedEmotion()?.id === emotion.id
+                ? emotion.color + ' border-current scale-105 shadow-lg'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            ].join(' ')">
+            <span class="text-4xl">{{ emotion.emoji }}</span>
+            <span class="text-sm font-medium">{{ emotion.label }}</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Nota Opcional -->
+    @if (selectedEmotion()) {
+      <div class="mb-6 animate-fadeIn">
+        <app-textarea
+          [(value)]="emotionNote"
+          [label]="'Agrega una nota (opcional)'"
+          [placeholder]="'¿Qué te hace sentir así? ¿Qué sucedió hoy?'"
+          [rows]="3"
+          [showCount]="true"
+          [maxLength]="300"
+        />
+      </div>
+
+      <!-- Botón Guardar -->
+      <div class="flex justify-end">
+        <app-button
+          [variant]="'primary'"
+          [icon]="'💾'"
+          (clicked)="saveEmotion()">
+          Guardar Registro
+        </app-button>
+      </div>
+    }
+  </app-card>
+
+  <!-- Historial de Emociones -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Historial de Emociones
+      </h2>
+      <p class="text-sm text-gray-600 mt-1">
+        Tus últimos registros
+      </p>
+    </div>
+
+    @if (emotionHistory().length === 0) {
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">📝</div>
+        <p class="text-gray-600 mb-2">Aún no has registrado emociones</p>
+        <p class="text-sm text-gray-500">Empieza a registrar cómo te sientes cada día</p>
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (entry of emotionHistory(); track entry.id) {
+          <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div class="flex items-start gap-4">
+              <!-- Emoji -->
+              <div class="text-4xl flex-shrink-0">
+                {{ entry.emotion.emoji }}
+              </div>
+
+              <!-- Contenido -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-medium text-gray-900">
+                    {{ entry.emotion.label }}
+                  </span>
+                  <app-badge [variant]="'neutral'" [size]="'sm'">
+                    {{ formatDate(entry.date) }} - {{ entry.time }}
+                  </app-badge>
+                </div>
+                @if (entry.note) {
+                  <p class="text-sm text-gray-600">
+                    {{ entry.note }}
+                  </p>
+                }
+              </div>
+
+              <!-- Botón Eliminar -->
+              <button
+                (click)="deleteEntry(entry.id)"
+                class="text-red-500 hover:text-red-700 transition-colors p-2">
+                <span class="text-xl">🗑️</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </app-card>
+
+</div>
