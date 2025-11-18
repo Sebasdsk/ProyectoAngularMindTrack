@@ -1,0 +1,245 @@
+<!-- src/app/focus/focus.html -->
+<div class="p-4 md:p-6 space-y-6 animate-fadeIn">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+      Temporizador Pomodoro ⏱️
+    </h1>
+    <p class="text-gray-600">
+      Mejora tu concentración con la técnica Pomodoro
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="text-center">
+        <div class="text-3xl mb-2">🎯</div>
+        <p class="text-2xl font-bold text-green-600">{{ sessionsCompleted() }}</p>
+        <p class="text-sm text-gray-600">Sesiones</p>
+      </div>
+    </app-card>
+
+    <app-card [padding]="'md'" [hover]="true">
+      <div class="text-center">
+        <div class="text-3xl mb-2">⏰</div>
+        <p class="text-2xl font-bold text-blue-600">{{ totalFocusTime }}</p>
+        <p class="text-sm text-gray-600">Minutos totales</p>
+      </div>
+    </app-card>
+
+    <app-card [padding]="'md'" [hover]="true" class="col-span-2 md:col-span-1">
+      <div class="text-center">
+        <div class="text-3xl mb-2">🔥</div>
+        <p class="text-2xl font-bold text-orange-600">{{ sessionsCompleted() % 4 }}</p>
+        <p class="text-sm text-gray-600">Hasta descanso largo</p>
+      </div>
+    </app-card>
+  </div>
+
+  <!-- Main Timer Card -->
+  <app-card [padding]="'xl'">
+    <!-- Mode Selector -->
+    <div class="flex justify-center gap-3 mb-8">
+      <button
+        (click)="switchMode('focus')"
+        [class]="[
+          'px-6 py-2 rounded-lg font-medium transition-all',
+          currentMode() === 'focus'
+            ? 'bg-green-600 text-white shadow-lg scale-105'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        ].join(' ')">
+        🎯 Enfoque
+      </button>
+      <button
+        (click)="switchMode('shortBreak')"
+        [class]="[
+          'px-6 py-2 rounded-lg font-medium transition-all',
+          currentMode() === 'shortBreak'
+            ? 'bg-blue-600 text-white shadow-lg scale-105'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        ].join(' ')">
+        ☕ Descanso
+      </button>
+      <button
+        (click)="switchMode('longBreak')"
+        [class]="[
+          'px-6 py-2 rounded-lg font-medium transition-all',
+          currentMode() === 'longBreak'
+            ? 'bg-purple-600 text-white shadow-lg scale-105'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+        ].join(' ')">
+        🌴 Descanso Largo
+      </button>
+    </div>
+
+    <!-- Timer Display -->
+    <div class="relative mb-8">
+      <!-- Progress Circle -->
+      <div class="flex justify-center">
+        <div class="relative w-72 h-72">
+          <svg class="w-full h-full transform -rotate-90">
+            <!-- Background circle -->
+            <circle
+              cx="144"
+              cy="144"
+              r="130"
+              stroke="currentColor"
+              stroke-width="8"
+              fill="none"
+              class="text-gray-200"
+            />
+            <!-- Progress circle -->
+            <circle
+              cx="144"
+              cy="144"
+              r="130"
+              stroke="currentColor"
+              stroke-width="8"
+              fill="none"
+              [attr.stroke-dasharray]="2 * 3.14159 * 130"
+              [attr.stroke-dashoffset]="2 * 3.14159 * 130 * (1 - progress / 100)"
+              [class]="currentMode() === 'focus' ? 'text-green-600' : currentMode() === 'shortBreak' ? 'text-blue-600' : 'text-purple-600'"
+              class="transition-all duration-1000"
+            />
+          </svg>
+
+          <!-- Time Display -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div class="text-6xl font-bold text-gray-900 mb-2">
+              {{ formattedTime }}
+            </div>
+            <div class="text-lg text-gray-600">
+              {{ getModeLabel(currentMode()) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex justify-center gap-4">
+      @if (!isRunning()) {
+        <app-button
+          [variant]="'primary'"
+          [size]="'lg'"
+          [icon]="'▶️'"
+          (clicked)="startTimer()">
+          Iniciar
+        </app-button>
+      } @else {
+        <app-button
+          [variant]="'secondary'"
+          [size]="'lg'"
+          [icon]="'⏸️'"
+          (clicked)="pauseTimer()">
+          Pausar
+        </app-button>
+      }
+
+      <app-button
+        [variant]="'ghost'"
+        [size]="'lg'"
+        [icon]="'🔄'"
+        (clicked)="resetTimer()">
+        Reiniciar
+      </app-button>
+    </div>
+  </app-card>
+
+  <!-- Settings -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Configuración ⚙️
+      </h2>
+      <p class="text-sm text-gray-600 mt-1">
+        Personaliza los tiempos de tu Pomodoro
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Tiempo de Enfoque (min)
+        </label>
+        <input
+          type="number"
+          [value]="focusDuration()"
+          (input)="updateFocusDuration($any($event.target).value)"
+          min="1"
+          max="60"
+          placeholder="Tiempo de Enfoque (min)"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Descanso Corto (min)
+        </label>
+        <input
+          type="number"
+          [value]="shortBreakDuration()"
+          (input)="updateShortBreakDuration($any($event.target).value)"
+          min="1"
+          max="30"
+          placeholder="Descanso Corto (min)"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Descanso Largo (min)
+        </label>
+        <input
+          type="number"
+          [value]="longBreakDuration()"
+          (input)="updateLongBreakDuration($any($event.target).value)"
+          min="1"
+          max="60"
+          placeholder="Descanso Largo (min)"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+        />
+      </div>
+    </div>
+  </app-card>
+
+  <!-- History -->
+  @if (pomodoroHistory().length > 0) {
+    <app-card [padding]="'lg'">
+      <div header>
+        <h2 class="text-xl font-semibold text-gray-900">
+          Historial de Sesiones 📊
+        </h2>
+        <p class="text-sm text-gray-600 mt-1">
+          Tus últimas 10 sesiones
+        </p>
+      </div>
+
+      <div class="space-y-2">
+        @for (session of pomodoroHistory(); track session.id) {
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">{{ getModeIcon(session.type) }}</span>
+              <div>
+                <p class="font-medium text-gray-900">
+                  {{ getModeLabel(session.type) }}
+                </p>
+                <p class="text-sm text-gray-600">
+                  {{ session.duration }} minutos
+                </p>
+              </div>
+            </div>
+            <app-badge [variant]="'neutral'" [size]="'sm'">
+              {{ formatSessionTime(session.completedAt) }}
+            </app-badge>
+          </div>
+        }
+      </div>
+    </app-card>
+  }
+
+</div>
