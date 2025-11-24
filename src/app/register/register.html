@@ -1,7 +1,6 @@
-<!-- PANTALLA COMPLETA CON GRADIENTE VERDE -->
+<!-- src/app/register/register.html -->
 <div class="min-h-screen bg-gradient-to-b from-green-100 via-green-200 to-green-500 flex items-center justify-center px-4 py-8">
 
-  <!-- CONTENEDOR CENTRADO -->
   <div class="w-full max-w-md">
 
     <!-- LOGO/TÍTULO -->
@@ -19,63 +18,141 @@
         Registro
       </h2>
 
+      <!-- MENSAJE DE ERROR -->
+      @if (errorMessage()) {
+        <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
       <!-- FORMULARIO -->
-      <div class="space-y-4">
+      <form (ngSubmit)="onRegister()" class="space-y-4">
 
         <!-- INPUT NOMBRE -->
         <input
           type="text"
-          placeholder="Nombre"
+          [(ngModel)]="nombre"
+          name="nombre"
+          placeholder="Nombre Completo *"
+          required
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <!-- INPUT CORREO ELECTRÓNICO -->
         <input
           type="email"
-          placeholder="Correo Electrónico"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="Correo Electrónico *"
+          required
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
-        <!-- INPUT USUARIO -->
+        <!-- INPUT FECHA DE NACIMIENTO (OPCIONAL) -->
+        <div>
+          <label for="fechaNacimiento" class="sr-only">Fecha de nacimiento (opcional)</label>
+          <input
+            id="fechaNacimiento"
+            type="date"
+            title="Fecha de nacimiento (opcional)"
+            placeholder="Fecha de nacimiento (opcional)"
+            [(ngModel)]="fechaNacimiento"
+            name="fechaNacimiento"
+            [disabled]="isLoading()"
+            [max]="maxDate"
+            [class]="[
+              'w-full px-4 py-3 bg-white border rounded-xl',
+              'focus:outline-none transition-all duration-200',
+              'text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed',
+              !esMayorDeEdad() && fechaNacimiento()
+                ? 'border-red-500 focus:border-red-600'
+                : 'border-gray-300 focus:border-green-600'
+            ].join(' ')"
+          />
+          @if (!esMayorDeEdad() && fechaNacimiento()) {
+            <p class="text-red-500 text-xs mt-1">Debes tener al menos 13 años</p>
+          }
+          <p class="text-gray-500 text-xs mt-1">Opcional - Nos ayuda a personalizar tu experiencia</p>
+        </div>
+
+        <!-- INPUT OCUPACIÓN (OPCIONAL) -->
         <input
           type="text"
-          placeholder="Usuario"
+          [(ngModel)]="ocupacion"
+          name="ocupacion"
+          placeholder="Ocupación (opcional)"
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <!-- INPUT CONTRASEÑA -->
         <input
           type="password"
-          placeholder="Contraseña"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Contraseña (mínimo 6 caracteres) *"
+          required
+          minlength="6"
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <!-- INPUT CONFIRMAR CONTRASEÑA -->
-        <input
-          type="password"
-          placeholder="Confirmar Contraseña"
-          class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
-                 focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
-        />
+        <div>
+          <input
+            type="password"
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            placeholder="Confirmar Contraseña *"
+            required
+            [disabled]="isLoading()"
+            [class]="[
+              'w-full px-4 py-3 bg-white border rounded-xl',
+              'focus:outline-none transition-all duration-200',
+              'text-gray-700 placeholder-gray-400',
+              'disabled:bg-gray-100 disabled:cursor-not-allowed',
+              !passwordsMatch() && confirmPassword()
+                ? 'border-red-500 focus:border-red-600'
+                : 'border-gray-300 focus:border-green-600'
+            ].join(' ')"
+          />
+          @if (!passwordsMatch() && confirmPassword()) {
+            <p class="text-red-500 text-xs mt-1">Las contraseñas no coinciden</p>
+          }
+        </div>
 
         <!-- BOTÓN CREAR CUENTA -->
         <button
+          type="submit"
+          [disabled]="isLoading() || !passwordsMatch() || (!esMayorDeEdad() && !!fechaNacimiento())"
           class="w-full bg-green-700 hover:bg-green-800 text-white font-medium
-                 py-3.5 rounded-xl transition-all duration-200 shadow-md"
+                 py-3.5 rounded-xl transition-all duration-200 shadow-md
+                 disabled:bg-gray-400 disabled:cursor-not-allowed
+                 flex items-center justify-center gap-2"
         >
-          Crear Cuenta
+          @if (isLoading()) {
+            <span class="animate-spin">🔄</span>
+            <span>Creando cuenta...</span>
+          } @else {
+            <span>Crear Cuenta</span>
+          }
         </button>
 
-      </div>
+      </form>
 
       <!-- ENLACE VOLVER AL LOGIN -->
       <div class="mt-6 text-center">

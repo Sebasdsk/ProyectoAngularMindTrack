@@ -1,4 +1,4 @@
-// src/app/services/auth.service.ts
+// src/app/services/auth.ts
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { SupabaseService } from './supabase';
@@ -7,7 +7,8 @@ export interface Usuario {
   id: string;
   email: string;
   nombre: string;
-  edad?: number;
+  fechaNacimiento?: string; // Cambiado de edad
+  edad?: number; // Calculada automáticamente
   ocupacion?: string;
   rol: 'estudiante' | 'tutor';
   avatar_url?: string;
@@ -24,7 +25,7 @@ export interface RegisterData {
   password: string;
   nombre: string;
   rol: 'estudiante' | 'tutor';
-  edad?: number;
+  fechaNacimiento?: string;
   ocupacion?: string;
 }
 
@@ -62,6 +63,19 @@ export class AuthService {
     }
   }
 
+  private calcularEdad(fechaNacimiento: string): number {
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+
+    return edad;
+  }
+
   private async loadUserProfile(userId: string): Promise<void> {
     try {
       const { data, error } = await this.supabase.client
@@ -76,9 +90,10 @@ export class AuthService {
         const user = await this.supabase.getCurrentUser();
         this.currentUserSignal.set({
           id: data.id,
-          email: user?.email || '',
+          email: user?.email || data.email || '',
           nombre: data.nombre,
-          edad: data.edad,
+          fechaNacimiento: data.fecha_nacimiento,
+          edad: data.fecha_nacimiento ? this.calcularEdad(data.fecha_nacimiento) : undefined,
           ocupacion: data.ocupacion,
           rol: data.rol,
           avatar_url: data.avatar_url,
@@ -94,7 +109,7 @@ export class AuthService {
     try {
       this.isLoadingSignal.set(true);
 
-      // 1. Crear usuario en auth
+      // 1. Crear usuario en Supabase Auth
       const { data: authData, error: authError } = await this.supabase.client.auth.signUp({
         email: data.email,
         password: data.password,
@@ -108,16 +123,21 @@ export class AuthService {
         id: authData.user.id,
         email: data.email,
         nombre: data.nombre,
-        edad: data.edad,
+        fecha_nacimiento: data.fechaNacimiento || null,
         ocupacion: data.ocupacion,
         rol: data.rol,
       });
 
-      if (profileError) return { success: false, error: profileError.message };
+      if (profileError) {
+        // Si falla la creación del perfil, intentar limpiar
+        await this.supabase.client.auth.signOut();
+        return { success: false, error: profileError.message };
+      }
 
       await this.loadUserProfile(authData.user.id);
       return { success: true };
     } catch (error: any) {
+      console.error('Error en registro:', error);
       return { success: false, error: error.message };
     } finally {
       this.isLoadingSignal.set(false);
@@ -157,7 +177,7 @@ export class AuthService {
         .from('usuarios')
         .update({
           nombre: updates.nombre,
-          edad: updates.edad,
+          fecha_nacimiento: updates.fechaNacimiento,
           ocupacion: updates.ocupacion,
           avatar_url: updates.avatar_url,
         })
