@@ -19,13 +19,26 @@
     </app-button>
   </div>
 
+  <!-- Mensajes -->
+  @if (successMessage()) {
+    <div class="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg animate-fadeIn">
+      {{ successMessage() }}
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-fadeIn">
+      {{ errorMessage() }}
+    </div>
+  }
+
   <!-- Progress Card -->
   <app-card [padding]="'md'">
     <div class="flex items-center justify-between">
       <div>
-        <p class="text-sm text-gray-600 mb-1">Progreso de hoy</p>
+        <p class="text-sm text-gray-600 mb-1">Progreso</p>
         <p class="text-2xl font-bold text-green-600">
-          {{ completedTasks.length }} / {{ tasks().length }}
+          {{ stats().completadas }} / {{ stats().total }}
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -49,11 +62,11 @@
     <div header>
       <h2 class="text-xl font-semibold text-gray-900">
         Tareas Pendientes
-        <span class="text-green-600 ml-2">({{ pendingTasks.length }})</span>
+        <span class="text-green-600 ml-2">({{ stats().pendientes }})</span>
       </h2>
     </div>
 
-    @if (pendingTasks.length === 0) {
+    @if (pendingTasks().length === 0) {
       <div class="text-center py-12">
         <div class="text-6xl mb-4">🎉</div>
         <p class="text-gray-600 mb-2">¡Genial! No tienes tareas pendientes</p>
@@ -61,13 +74,13 @@
       </div>
     } @else {
       <div class="space-y-3">
-        @for (task of pendingTasks; track task.id) {
+        @for (task of pendingTasks(); track task.id) {
           <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
             <div class="flex items-start gap-3">
               <!-- Checkbox -->
               <div class="pt-1">
                 <app-checkbox
-                  [checked]="task.completed"
+                  [checked]="task.completada"
                   (checkedChange)="toggleTask(task.id)"
                 />
               </div>
@@ -76,17 +89,17 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between gap-2 mb-1">
                   <h3 class="font-medium text-gray-900">
-                    {{ task.title }}
+                    {{ task.titulo }}
                   </h3>
                   <app-badge
-                    [variant]="getPriorityColor(task.priority)"
+                    [variant]="getPriorityColor(task.prioridad)"
                     [size]="'sm'">
-                    {{ getPriorityLabel(task.priority) }}
+                    {{ getPriorityLabel(task.prioridad) }}
                   </app-badge>
                 </div>
-                @if (task.description) {
+                @if (task.descripcion) {
                   <p class="text-sm text-gray-600">
-                    {{ task.description }}
+                    {{ task.descripcion }}
                   </p>
                 }
               </div>
@@ -112,23 +125,23 @@
   </app-card>
 
   <!-- Completed Tasks -->
-  @if (completedTasks.length > 0) {
+  @if (completedTasks().length > 0) {
     <app-card [padding]="'lg'">
       <div header>
         <h2 class="text-xl font-semibold text-gray-900">
           Tareas Completadas
-          <span class="text-gray-500 ml-2">({{ completedTasks.length }})</span>
+          <span class="text-gray-500 ml-2">({{ completedTasks().length }})</span>
         </h2>
       </div>
 
       <div class="space-y-3">
-        @for (task of completedTasks; track task.id) {
+        @for (task of completedTasks(); track task.id) {
           <div class="p-4 bg-green-50 rounded-lg opacity-75">
             <div class="flex items-start gap-3">
               <!-- Checkbox -->
               <div class="pt-1">
                 <app-checkbox
-                  [checked]="task.completed"
+                  [checked]="task.completada"
                   (checkedChange)="toggleTask(task.id)"
                 />
               </div>
@@ -136,11 +149,11 @@
               <!-- Task Info -->
               <div class="flex-1 min-w-0">
                 <h3 class="font-medium text-gray-600 line-through">
-                  {{ task.title }}
+                  {{ task.titulo }}
                 </h3>
-                @if (task.description) {
+                @if (task.descripcion) {
                   <p class="text-sm text-gray-500 line-through">
-                    {{ task.description }}
+                    {{ task.descripcion }}
                   </p>
                 }
               </div>
@@ -166,12 +179,19 @@
     (closed)="closeModal()">
 
     <div class="space-y-4">
+      @if (errorMessage()) {
+        <div class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
       <app-input
         [(value)]="taskTitle"
         [label]="'Título de la tarea'"
         [placeholder]="'Ej: Revisar correos'"
         [required]="true"
         [icon]="'📝'"
+        [disabled]="isSaving()"
       />
 
       <app-input
@@ -179,6 +199,7 @@
         [label]="'Descripción (opcional)'"
         [placeholder]="'Agrega detalles sobre la tarea'"
         [icon]="'📄'"
+        [disabled]="isSaving()"
       />
 
       <div>
@@ -187,32 +208,41 @@
         </label>
         <div class="grid grid-cols-3 gap-2">
           <button
-            (click)="taskPriority.set('low')"
+            type="button"
+            (click)="taskPriority.set('baja')"
+            [disabled]="isSaving()"
             [class]="[
               'px-4 py-2 rounded-lg border-2 transition-all',
-              taskPriority() === 'low'
+              taskPriority() === 'baja'
                 ? 'bg-blue-100 border-blue-500 text-blue-800'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-gray-200 hover:border-gray-300',
+              isSaving() ? 'opacity-50 cursor-not-allowed' : ''
             ].join(' ')">
             Baja
           </button>
           <button
-            (click)="taskPriority.set('medium')"
+            type="button"
+            (click)="taskPriority.set('media')"
+            [disabled]="isSaving()"
             [class]="[
               'px-4 py-2 rounded-lg border-2 transition-all',
-              taskPriority() === 'medium'
+              taskPriority() === 'media'
                 ? 'bg-yellow-100 border-yellow-500 text-yellow-800'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-gray-200 hover:border-gray-300',
+              isSaving() ? 'opacity-50 cursor-not-allowed' : ''
             ].join(' ')">
             Media
           </button>
           <button
-            (click)="taskPriority.set('high')"
+            type="button"
+            (click)="taskPriority.set('alta')"
+            [disabled]="isSaving()"
             [class]="[
               'px-4 py-2 rounded-lg border-2 transition-all',
-              taskPriority() === 'high'
+              taskPriority() === 'alta'
                 ? 'bg-red-100 border-red-500 text-red-800'
-                : 'bg-white border-gray-200 hover:border-gray-300'
+                : 'bg-white border-gray-200 hover:border-gray-300',
+              isSaving() ? 'opacity-50 cursor-not-allowed' : ''
             ].join(' ')">
             Alta
           </button>
@@ -223,12 +253,14 @@
     <div footer class="flex gap-3">
       <app-button
         [variant]="'secondary'"
+        [disabled]="isSaving()"
         (clicked)="closeModal()">
         Cancelar
       </app-button>
       <app-button
         [variant]="'primary'"
-        [disabled]="!taskTitle().trim()"
+        [disabled]="!taskTitle().trim() || isSaving()"
+        [loading]="isSaving()"
         (clicked)="saveTask()">
         {{ editingTask() ? 'Guardar Cambios' : 'Crear Tarea' }}
       </app-button>

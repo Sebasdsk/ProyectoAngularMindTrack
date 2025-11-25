@@ -1,20 +1,12 @@
 // src/app/tasks/tasks.ts
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal, inject, computed } from '@angular/core';
 import { Card } from '../shared/card/card';
 import { Button } from '../shared/button/button';
 import { Input } from '../shared/input/input';
 import { Checkbox } from '../shared/checkbox/checkbox';
 import { Modal } from '../shared/modal/modal';
 import { Badge } from '../shared/badge/badge';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  createdAt: Date;
-}
+import { TaskService, PrioridadTarea } from '../services/tasks';
 
 @Component({
   selector: 'app-tasks',
@@ -24,127 +16,128 @@ interface Task {
   styleUrl: './tasks.css',
 })
 export class Tasks {
-  tasks = signal<Task[]>([
-    {
-      id: '1',
-      title: 'Revisar correos importantes',
-      description: 'Responder correos pendientes del trabajo',
-      completed: false,
-      priority: 'high',
-      createdAt: new Date(),
-    },
-    {
-      id: '2',
-      title: 'Hacer ejercicio 30 min',
-      completed: true,
-      priority: 'medium',
-      createdAt: new Date(),
-    },
-    {
-      id: '3',
-      title: 'Leer 20 páginas del libro',
-      description: 'Continuar con el libro de desarrollo personal',
-      completed: false,
-      priority: 'low',
-      createdAt: new Date(),
-    },
-  ]);
+  private taskService = inject(TaskService);
+
+  // Datos del servicio
+  tasks = this.taskService.tasks;
+  pendingTasks = this.taskService.pendingTasks;
+  completedTasks = this.taskService.completedTasks;
+  stats = this.taskService.stats;
 
   // Modal state
   showModal = signal(false);
-  editingTask = signal<Task | null>(null);
+  editingTask = signal<any | null>(null);
+  isSaving = signal(false);
+  errorMessage = signal<string | null>(null);
+  successMessage = signal<string | null>(null);
 
   // Form state
   taskTitle = signal('');
   taskDescription = signal('');
-  taskPriority = signal<'low' | 'medium' | 'high'>('medium');
-
-  get pendingTasks() {
-    return this.tasks().filter((t) => !t.completed);
-  }
-
-  get completedTasks() {
-    return this.tasks().filter((t) => t.completed);
-  }
+  taskPriority = signal<PrioridadTarea>('media');
 
   get completionPercentage() {
-    const total = this.tasks().length;
-    if (total === 0) return 0;
-    const completed = this.completedTasks.length;
-    return Math.round((completed / total) * 100);
+    return this.stats().tasaCompletitud;
   }
 
   openNewTaskModal(): void {
     this.editingTask.set(null);
     this.taskTitle.set('');
     this.taskDescription.set('');
-    this.taskPriority.set('medium');
+    this.taskPriority.set('media');
     this.showModal.set(true);
   }
 
-  openEditModal(task: Task): void {
+  openEditModal(task: any): void {
     this.editingTask.set(task);
-    this.taskTitle.set(task.title);
-    this.taskDescription.set(task.description || '');
-    this.taskPriority.set(task.priority);
+    this.taskTitle.set(task.titulo);
+    this.taskDescription.set(task.descripcion || '');
+    this.taskPriority.set(task.prioridad);
     this.showModal.set(true);
   }
 
   closeModal(): void {
     this.showModal.set(false);
     this.editingTask.set(null);
+    this.errorMessage.set(null);
   }
 
-  saveTask(): void {
+  async saveTask(): Promise<void> {
     const title = this.taskTitle().trim();
-    if (!title) return;
-
-    const editing = this.editingTask();
-
-    if (editing) {
-      // Editar tarea existente
-      this.tasks.update((tasks) =>
-        tasks.map((t) =>
-          t.id === editing.id
-            ? { ...t, title, description: this.taskDescription(), priority: this.taskPriority() }
-            : t
-        )
-      );
-    } else {
-      // Crear nueva tarea
-      const newTask: Task = {
-        id: Date.now().toString(),
-        title,
-        description: this.taskDescription() || undefined,
-        completed: false,
-        priority: this.taskPriority(),
-        createdAt: new Date(),
-      };
-      this.tasks.update((tasks) => [...tasks, newTask]);
+    if (!title) {
+      this.errorMessage.set('El título es requerido');
+      return;
     }
 
-    this.closeModal();
+    this.isSaving.set(true);
+    this.errorMessage.set(null);
+
+    try {
+      const editing = this.editingTask();
+
+      if (editing) {
+        // Editar tarea existente
+        const result = await this.taskService.updateTask(editing.id, {
+          titulo: title,
+          descripcion: this.taskDescription(),
+          prioridad: this.taskPriority(),
+        });
+
+        if (result.success) {
+          this.successMessage.set('Tarea actualizada');
+          this.closeModal();
+        } else {
+          this.errorMessage.set(result.error || 'Error al actualizar');
+        }
+      } else {
+        // Crear nueva tarea
+        const result = await this.taskService.createTask(title, {
+          descripcion: this.taskDescription(),
+          prioridad: this.taskPriority(),
+          categoria: 'personal',
+        });
+
+        if (result.success) {
+          this.successMessage.set('Tarea creada');
+          this.closeModal();
+        } else {
+          this.errorMessage.set(result.error || 'Error al crear');
+        }
+      }
+
+      setTimeout(() => this.successMessage.set(null), 3000);
+    } catch (error) {
+      this.errorMessage.set('Error de conexión');
+      console.error('Error al guardar tarea:', error);
+    } finally {
+      this.isSaving.set(false);
+    }
   }
 
-  toggleTask(taskId: string): void {
-    this.tasks.update((tasks) =>
-      tasks.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t))
-    );
+  async toggleTask(taskId: string): Promise<void> {
+    await this.taskService.toggleTaskCompletion(taskId);
   }
 
-  deleteTask(taskId: string): void {
-    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-      this.tasks.update((tasks) => tasks.filter((t) => t.id !== taskId));
+  async deleteTask(taskId: string): Promise<void> {
+    if (!confirm('¿Estás seguro de eliminar esta tarea?')) return;
+
+    const result = await this.taskService.deleteTask(taskId);
+
+    if (result.success) {
+      this.successMessage.set('Tarea eliminada');
+      setTimeout(() => this.successMessage.set(null), 2000);
+    } else {
+      this.errorMessage.set('Error al eliminar');
     }
   }
 
   getPriorityColor(priority: string): 'error' | 'warning' | 'info' {
     switch (priority) {
-      case 'high':
+      case 'alta':
         return 'error';
-      case 'medium':
+      case 'media':
         return 'warning';
-      case 'low':
+      case 'baja':
         return 'info';
       default:
         return 'info';
@@ -153,11 +146,11 @@ export class Tasks {
 
   getPriorityLabel(priority: string): string {
     switch (priority) {
-      case 'high':
+      case 'alta':
         return 'Alta';
-      case 'medium':
+      case 'media':
         return 'Media';
-      case 'low':
+      case 'baja':
         return 'Baja';
       default:
         return '';

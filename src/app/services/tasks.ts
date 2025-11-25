@@ -1,4 +1,4 @@
-// src/app/services/task.service.ts
+// src/app/services/tasks.ts
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
@@ -14,15 +14,15 @@ export interface Tarea {
   completada: boolean;
   prioridad: PrioridadTarea;
   categoria: CategoriaTarea;
-  fecha_vencimiento?: Date;
-  fecha_completado?: Date;
-  etiquetas?: string[];
-  fecha_creacion: Date;
-  fecha_actualizacion: Date;
+  fecha_vencimiento?: Date; // En BD es fecha_limite
+  fecha_completado?: Date; // En BD es fecha_completada
+  // etiquetas?: string[];  <-- ELIMINADO PORQUE NO EXISTE EN BD
+  fecha_creacion: Date; // En BD es created_at
+  fecha_actualizacion: Date; // En BD es updated_at
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TaskService {
   private supabase = inject(SupabaseService);
@@ -32,30 +32,20 @@ export class TaskService {
 
   tasks = this.tasksSignal.asReadonly();
 
-  pendingTasks = computed(() =>
-    this.tasksSignal().filter(t => !t.completada)
-  );
+  pendingTasks = computed(() => this.tasksSignal().filter((t) => !t.completada));
 
-  completedTasks = computed(() =>
-    this.tasksSignal().filter(t => t.completada)
-  );
+  completedTasks = computed(() => this.tasksSignal().filter((t) => t.completada));
 
-  highPriorityTasks = computed(() =>
-    this.pendingTasks().filter(t => t.prioridad === 'alta')
-  );
+  highPriorityTasks = computed(() => this.pendingTasks().filter((t) => t.prioridad === 'alta'));
 
-  mediumPriorityTasks = computed(() =>
-    this.pendingTasks().filter(t => t.prioridad === 'media')
-  );
+  mediumPriorityTasks = computed(() => this.pendingTasks().filter((t) => t.prioridad === 'media'));
 
-  lowPriorityTasks = computed(() =>
-    this.pendingTasks().filter(t => t.prioridad === 'baja')
-  );
+  lowPriorityTasks = computed(() => this.pendingTasks().filter((t) => t.prioridad === 'baja'));
 
   overdueTasks = computed(() => {
     const now = new Date();
-    return this.pendingTasks().filter(t =>
-      t.fecha_vencimiento && new Date(t.fecha_vencimiento) < now
+    return this.pendingTasks().filter(
+      (t) => t.fecha_vencimiento && new Date(t.fecha_vencimiento) < now
     );
   });
 
@@ -65,7 +55,7 @@ export class TaskService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return this.pendingTasks().filter(t => {
+    return this.pendingTasks().filter((t) => {
       if (!t.fecha_vencimiento) return false;
       const dueDate = new Date(t.fecha_vencimiento);
       return dueDate >= today && dueDate < tomorrow;
@@ -85,23 +75,25 @@ export class TaskService {
       vencidas,
       tasaCompletitud: total > 0 ? Math.round((completadas / total) * 100) : 0,
       tareas_Hoy: this.todayTasks().length,
-      prioridadAlta: this.highPriorityTasks().length
+      prioridadAlta: this.highPriorityTasks().length,
     };
   });
 
-  readonly categoryConfigs: Record<CategoriaTarea, { label: string; icon: string; color: string }> = {
-    personal: { label: 'Personal', icon: '👤', color: '#3b82f6' },
-    trabajo: { label: 'Trabajo', icon: '💼', color: '#8b5cf6' },
-    estudio: { label: 'Estudio', icon: '📚', color: '#10b981' },
-    salud: { label: 'Salud', icon: '❤️', color: '#ef4444' },
-    social: { label: 'Social', icon: '👥', color: '#f59e0b' },
-    otro: { label: 'Otro', icon: '📌', color: '#6b7280' }
-  };
+  // Configuración de colores para la UI
+  readonly categoryConfigs: Record<CategoriaTarea, { label: string; icon: string; color: string }> =
+    {
+      personal: { label: 'Personal', icon: '👤', color: '#3b82f6' },
+      trabajo: { label: 'Trabajo', icon: '💼', color: '#8b5cf6' },
+      estudio: { label: 'Estudio', icon: '📚', color: '#10b981' },
+      salud: { label: 'Salud', icon: '❤️', color: '#ef4444' },
+      social: { label: 'Social', icon: '👥', color: '#f59e0b' },
+      otro: { label: 'Otro', icon: '📌', color: '#6b7280' },
+    };
 
   readonly priorityConfigs: Record<PrioridadTarea, { label: string; color: string }> = {
     alta: { label: 'Alta', color: '#ef4444' },
     media: { label: 'Media', color: '#f59e0b' },
-    baja: { label: 'Baja', color: '#10b981' }
+    baja: { label: 'Baja', color: '#10b981' },
   };
 
   constructor() {
@@ -115,7 +107,7 @@ export class TaskService {
       prioridad?: PrioridadTarea;
       categoria?: CategoriaTarea;
       fecha_vencimiento?: Date;
-      etiquetas?: string[];
+      // etiquetas eliminado
     }
   ): Promise<{ success: boolean; task?: Tarea; error?: string }> {
     try {
@@ -126,6 +118,7 @@ export class TaskService {
         return { success: false, error: 'El título es requerido' };
       }
 
+      // CORRECCIÓN: Usamos los nombres reales de las columnas en Supabase
       const { data, error } = await this.supabase.client
         .from('tareas')
         .insert({
@@ -134,8 +127,8 @@ export class TaskService {
           descripcion: options?.descripcion?.trim(),
           prioridad: options?.prioridad || 'media',
           categoria: options?.categoria || 'otro',
-          fecha_vencimiento: options?.fecha_vencimiento?.toISOString(),
-          etiquetas: options?.etiquetas || []
+          fecha_limite: options?.fecha_vencimiento?.toISOString(), // Mapeo correcto
+          // etiquetas: eliminado
         })
         .select()
         .single();
@@ -143,6 +136,7 @@ export class TaskService {
       if (error) return { success: false, error: error.message };
 
       if (data) {
+        // CORRECCIÓN: Mapeamos la respuesta de la BD a nuestra interfaz Tarea
         const newTask: Tarea = {
           id: data.id,
           usuario_id: data.usuario_id,
@@ -151,13 +145,13 @@ export class TaskService {
           completada: data.completada,
           prioridad: data.prioridad,
           categoria: data.categoria,
-          fecha_vencimiento: data.fecha_vencimiento ? new Date(data.fecha_vencimiento) : undefined,
-          fecha_completado: data.fecha_completado ? new Date(data.fecha_completado) : undefined,
-          etiquetas: data.etiquetas,
-          fecha_creacion: new Date(data.fecha_creacion),
-          fecha_actualizacion: new Date(data.fecha_actualizacion)
+          fecha_vencimiento: data.fecha_limite ? new Date(data.fecha_limite) : undefined,
+          fecha_completado: data.fecha_completada ? new Date(data.fecha_completada) : undefined,
+          // etiquetas: eliminado
+          fecha_creacion: new Date(data.created_at),
+          fecha_actualizacion: new Date(data.updated_at),
         };
-        this.tasksSignal.update(tasks => [...tasks, newTask]);
+        this.tasksSignal.update((tasks) => [...tasks, newTask]);
         return { success: true, task: newTask };
       }
 
@@ -169,30 +163,36 @@ export class TaskService {
 
   async updateTask(
     taskId: string,
-    updates: Partial<Omit<Tarea, 'id' | 'usuario_id' | 'fecha_creacion'>>
+    updates: Partial<Omit<Tarea, 'id' | 'usuario_id' | 'fecha_creacion' | 'fecha_actualizacion'>>
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      // CORRECCIÓN: Objeto de actualización con nombres de columnas de BD
+      const dbUpdates: any = {
+        titulo: updates.titulo,
+        descripcion: updates.descripcion,
+        completada: updates.completada,
+        prioridad: updates.prioridad,
+        categoria: updates.categoria,
+      };
+
+      if (updates.fecha_vencimiento !== undefined) {
+        dbUpdates.fecha_limite = updates.fecha_vencimiento?.toISOString();
+      }
+      if (updates.fecha_completado !== undefined) {
+        dbUpdates.fecha_completada = updates.fecha_completado?.toISOString();
+      }
+
       const { error } = await this.supabase.client
         .from('tareas')
-        .update({
-          titulo: updates.titulo,
-          descripcion: updates.descripcion,
-          completada: updates.completada,
-          prioridad: updates.prioridad,
-          categoria: updates.categoria,
-          fecha_vencimiento: updates.fecha_vencimiento?.toISOString(),
-          fecha_completado: updates.fecha_completado?.toISOString(),
-          etiquetas: updates.etiquetas
-        })
+        .update(dbUpdates)
         .eq('id', taskId);
 
       if (error) return { success: false, error: error.message };
 
-      this.tasksSignal.update(tasks =>
-        tasks.map(task =>
-          task.id === taskId
-            ? { ...task, ...updates, fecha_actualizacion: new Date() }
-            : task
+      // Actualizamos el estado local
+      this.tasksSignal.update((tasks) =>
+        tasks.map((task) =>
+          task.id === taskId ? { ...task, ...updates, fecha_actualizacion: new Date() } : task
         )
       );
 
@@ -203,26 +203,23 @@ export class TaskService {
   }
 
   async toggleTaskCompletion(taskId: string): Promise<void> {
-    const task = this.tasksSignal().find(t => t.id === taskId);
+    const task = this.tasksSignal().find((t) => t.id === taskId);
     if (!task) return;
 
     const completada = !task.completada;
     await this.updateTask(taskId, {
       completada,
-      fecha_completado: completada ? new Date() : undefined
+      fecha_completado: completada ? new Date() : undefined,
     });
   }
 
   async deleteTask(taskId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { error } = await this.supabase.client
-        .from('tareas')
-        .delete()
-        .eq('id', taskId);
+      const { error } = await this.supabase.client.from('tareas').delete().eq('id', taskId);
 
       if (error) return { success: false, error: error.message };
 
-      this.tasksSignal.update(tasks => tasks.filter(t => t.id !== taskId));
+      this.tasksSignal.update((tasks) => tasks.filter((t) => t.id !== taskId));
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -238,12 +235,12 @@ export class TaskService {
         .from('tareas')
         .select('*')
         .eq('usuario_id', user.id)
-        .order('fecha_creacion', { ascending: false });
+        .order('created_at', { ascending: false }); // Usar created_at
 
       if (error) throw error;
 
       if (data) {
-        const tasks = data.map(t => ({
+        const tasks = data.map((t) => ({
           id: t.id,
           usuario_id: t.usuario_id,
           titulo: t.titulo,
@@ -251,11 +248,12 @@ export class TaskService {
           completada: t.completada,
           prioridad: t.prioridad,
           categoria: t.categoria,
-          fecha_vencimiento: t.fecha_vencimiento ? new Date(t.fecha_vencimiento) : undefined,
-          fecha_completado: t.fecha_completado ? new Date(t.fecha_completado) : undefined,
-          etiquetas: t.etiquetas,
-          fecha_creacion: new Date(t.fecha_creacion),
-          fecha_actualizacion: new Date(t.fecha_actualizacion)
+          // Mapeos corregidos
+          fecha_vencimiento: t.fecha_limite ? new Date(t.fecha_limite) : undefined,
+          fecha_completado: t.fecha_completada ? new Date(t.fecha_completada) : undefined,
+          // etiquetas eliminado
+          fecha_creacion: new Date(t.created_at),
+          fecha_actualizacion: new Date(t.updated_at),
         }));
         this.tasksSignal.set(tasks);
       }
@@ -265,31 +263,23 @@ export class TaskService {
   }
 
   getTasksByCategory(categoria: CategoriaTarea): Tarea[] {
-    return this.tasksSignal().filter(t => t.categoria === categoria);
+    return this.tasksSignal().filter((t) => t.categoria === categoria);
   }
 
-  getTasksByTag(tag: string): Tarea[] {
-    return this.tasksSignal().filter(t => t.etiquetas?.includes(tag));
-  }
-
-  getAllTags(): string[] {
-    const allTags = this.tasksSignal().flatMap(t => t.etiquetas || []);
-    return [...new Set(allTags)].sort();
-  }
+  // Eliminados métodos de etiquetas (getTasksByTag, getAllTags) porque no existen
 
   searchTasks(searchTerm: string): Tarea[] {
     const term = searchTerm.toLowerCase().trim();
     if (!term) return this.tasksSignal();
 
-    return this.tasksSignal().filter(task =>
-      task.titulo.toLowerCase().includes(term) ||
-      task.descripcion?.toLowerCase().includes(term) ||
-      task.etiquetas?.some(tag => tag.toLowerCase().includes(term))
+    return this.tasksSignal().filter(
+      (task) =>
+        task.titulo.toLowerCase().includes(term) || task.descripcion?.toLowerCase().includes(term)
     );
   }
 
   getCompletedTasksInRange(startDate: Date, endDate: Date): Tarea[] {
-    return this.completedTasks().filter(task => {
+    return this.completedTasks().filter((task) => {
       if (!task.fecha_completado) return false;
       const completedDate = new Date(task.fecha_completado);
       return completedDate >= startDate && completedDate <= endDate;
@@ -300,8 +290,8 @@ export class TaskService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const tasksCreated = this.tasksSignal().filter(t =>
-      new Date(t.fecha_creacion) >= startDate
+    const tasksCreated = this.tasksSignal().filter(
+      (t) => new Date(t.fecha_creacion) >= startDate
     ).length;
 
     const tasksCompleted = this.getCompletedTasksInRange(startDate, new Date()).length;
