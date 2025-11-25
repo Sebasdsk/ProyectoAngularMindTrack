@@ -1,0 +1,14 @@
+.card-header:not(:empty) {
+  margin-bottom: 1rem;
+}
+
+.card-footer:not(:empty) {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.card-header:empty,
+.card-footer:empty {
+  display: none;
+}

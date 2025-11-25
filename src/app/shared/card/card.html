@@ -1,0 +1,22 @@
+<div
+  [class]="cardClasses()"
+  (click)="onClick()"
+  [attr.role]="clickable() ? 'button' : null"
+  [attr.tabindex]="clickable() ? '0' : null">
+
+  <!-- Header -->
+  <div class="card-header">
+    <ng-content select="[header]"></ng-content>
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+    <ng-content></ng-content>
+  </div>
+
+  <!-- Footer -->
+  <div class="card-footer">
+    <ng-content select="[footer]"></ng-content>
+  </div>
+
+</div>

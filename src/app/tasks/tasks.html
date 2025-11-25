@@ -1,0 +1,238 @@
+<!-- src/app/tasks/tasks.html -->
+<div class="p-4 md:p-6 space-y-6 animate-fadeIn">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        Mis Tareas ✅
+      </h1>
+      <p class="text-gray-600">
+        Organiza tus tareas y mantén el control
+      </p>
+    </div>
+    <app-button
+      [variant]="'primary'"
+      [icon]="'➕'"
+      (clicked)="openNewTaskModal()">
+      Nueva Tarea
+    </app-button>
+  </div>
+
+  <!-- Progress Card -->
+  <app-card [padding]="'md'">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-gray-600 mb-1">Progreso de hoy</p>
+        <p class="text-2xl font-bold text-green-600">
+          {{ completedTasks.length }} / {{ tasks().length }}
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <p class="text-3xl font-bold text-gray-900">{{ completionPercentage }}%</p>
+          <p class="text-xs text-gray-500">Completado</p>
+        </div>
+        <div class="text-4xl">🎯</div>
+      </div>
+    </div>
+    <div class="mt-4 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div
+        class="bg-green-600 h-full rounded-full transition-all duration-500"
+        [style.width.%]="completionPercentage">
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Pending Tasks -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Tareas Pendientes
+        <span class="text-green-600 ml-2">({{ pendingTasks.length }})</span>
+      </h2>
+    </div>
+
+    @if (pendingTasks.length === 0) {
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">🎉</div>
+        <p class="text-gray-600 mb-2">¡Genial! No tienes tareas pendientes</p>
+        <p class="text-sm text-gray-500">Crea una nueva tarea para mantenerte productivo</p>
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (task of pendingTasks; track task.id) {
+          <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div class="flex items-start gap-3">
+              <!-- Checkbox -->
+              <div class="pt-1">
+                <app-checkbox
+                  [checked]="task.completed"
+                  (checkedChange)="toggleTask(task.id)"
+                />
+              </div>
+
+              <!-- Task Info -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2 mb-1">
+                  <h3 class="font-medium text-gray-900">
+                    {{ task.title }}
+                  </h3>
+                  <app-badge
+                    [variant]="getPriorityColor(task.priority)"
+                    [size]="'sm'">
+                    {{ getPriorityLabel(task.priority) }}
+                  </app-badge>
+                </div>
+                @if (task.description) {
+                  <p class="text-sm text-gray-600">
+                    {{ task.description }}
+                  </p>
+                }
+              </div>
+
+              <!-- Actions -->
+              <div class="flex gap-2">
+                <button
+                  (click)="openEditModal(task)"
+                  class="text-blue-500 hover:text-blue-700 transition-colors p-1">
+                  <span class="text-lg">✏️</span>
+                </button>
+                <button
+                  (click)="deleteTask(task.id)"
+                  class="text-red-500 hover:text-red-700 transition-colors p-1">
+                  <span class="text-lg">🗑️</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </app-card>
+
+  <!-- Completed Tasks -->
+  @if (completedTasks.length > 0) {
+    <app-card [padding]="'lg'">
+      <div header>
+        <h2 class="text-xl font-semibold text-gray-900">
+          Tareas Completadas
+          <span class="text-gray-500 ml-2">({{ completedTasks.length }})</span>
+        </h2>
+      </div>
+
+      <div class="space-y-3">
+        @for (task of completedTasks; track task.id) {
+          <div class="p-4 bg-green-50 rounded-lg opacity-75">
+            <div class="flex items-start gap-3">
+              <!-- Checkbox -->
+              <div class="pt-1">
+                <app-checkbox
+                  [checked]="task.completed"
+                  (checkedChange)="toggleTask(task.id)"
+                />
+              </div>
+
+              <!-- Task Info -->
+              <div class="flex-1 min-w-0">
+                <h3 class="font-medium text-gray-600 line-through">
+                  {{ task.title }}
+                </h3>
+                @if (task.description) {
+                  <p class="text-sm text-gray-500 line-through">
+                    {{ task.description }}
+                  </p>
+                }
+              </div>
+
+              <!-- Delete Button -->
+              <button
+                (click)="deleteTask(task.id)"
+                class="text-red-500 hover:text-red-700 transition-colors p-1">
+                <span class="text-lg">🗑️</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </app-card>
+  }
+
+  <!-- Task Modal -->
+  <app-modal
+    [isOpen]="showModal()"
+    [title]="editingTask() ? 'Editar Tarea' : 'Nueva Tarea'"
+    [hasFooter]="true"
+    (closed)="closeModal()">
+
+    <div class="space-y-4">
+      <app-input
+        [(value)]="taskTitle"
+        [label]="'Título de la tarea'"
+        [placeholder]="'Ej: Revisar correos'"
+        [required]="true"
+        [icon]="'📝'"
+      />
+
+      <app-input
+        [(value)]="taskDescription"
+        [label]="'Descripción (opcional)'"
+        [placeholder]="'Agrega detalles sobre la tarea'"
+        [icon]="'📄'"
+      />
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Prioridad
+        </label>
+        <div class="grid grid-cols-3 gap-2">
+          <button
+            (click)="taskPriority.set('low')"
+            [class]="[
+              'px-4 py-2 rounded-lg border-2 transition-all',
+              taskPriority() === 'low'
+                ? 'bg-blue-100 border-blue-500 text-blue-800'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            ].join(' ')">
+            Baja
+          </button>
+          <button
+            (click)="taskPriority.set('medium')"
+            [class]="[
+              'px-4 py-2 rounded-lg border-2 transition-all',
+              taskPriority() === 'medium'
+                ? 'bg-yellow-100 border-yellow-500 text-yellow-800'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            ].join(' ')">
+            Media
+          </button>
+          <button
+            (click)="taskPriority.set('high')"
+            [class]="[
+              'px-4 py-2 rounded-lg border-2 transition-all',
+              taskPriority() === 'high'
+                ? 'bg-red-100 border-red-500 text-red-800'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            ].join(' ')">
+            Alta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div footer class="flex gap-3">
+      <app-button
+        [variant]="'secondary'"
+        (clicked)="closeModal()">
+        Cancelar
+      </app-button>
+      <app-button
+        [variant]="'primary'"
+        [disabled]="!taskTitle().trim()"
+        (clicked)="saveTask()">
+        {{ editingTask() ? 'Guardar Cambios' : 'Crear Tarea' }}
+      </app-button>
+    </div>
+  </app-modal>
+
+</div>

@@ -1,4 +1,4 @@
-<!-- PANTALLA COMPLETA CON GRADIENTE VERDE -->
+<!-- src/app/login/login.html -->
 <div class="min-h-screen bg-gradient-to-b from-green-100 via-green-200 to-green-500 flex items-center justify-center px-4 py-8">
 
   <!-- CONTENEDOR CENTRADO -->
@@ -19,34 +19,61 @@
         Login
       </h2>
 
+      <!-- MENSAJE DE ERROR -->
+      @if (errorMessage()) {
+        <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
       <!-- FORMULARIO -->
-      <div class="flex flex-col space-y-5">
-        <!-- INPUT USUARIO -->
+      <form (ngSubmit)="onLogin()" class="flex flex-col space-y-5">
+
+        <!-- INPUT EMAIL -->
         <input
-          type="text"
-          placeholder="Usuario"
+          type="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="Correo Electrónico"
+          required
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 text-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <!-- INPUT CONTRASEÑA -->
         <input
           type="password"
+          [(ngModel)]="password"
+          name="password"
           placeholder="Contraseña"
+          required
+          [disabled]="isLoading()"
           class="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl
                  focus:outline-none focus:border-green-600
-                 transition-all duration-200 ñtext-gray-700 placeholder-gray-400"
+                 transition-all duration-200 text-gray-700 placeholder-gray-400
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
 
         <!-- BOTÓN ENTRAR -->
         <button
+          type="submit"
+          [disabled]="isLoading()"
           class="mt-2 w-full bg-green-700 hover:bg-green-800 text-white font-medium
-                 py-3.5 rounded-xl transition-all duration-200 shadow-md"
+                 py-3.5 rounded-xl transition-all duration-200 shadow-md
+                 disabled:bg-gray-400 disabled:cursor-not-allowed
+                 flex items-center justify-center gap-2"
         >
-          Entrar
+          @if (isLoading()) {
+            <span class="animate-spin">🔄</span>
+            <span>Iniciando sesión...</span>
+          } @else {
+            <span>Entrar</span>
+          }
         </button>
-      </div>
+      </form>
 
       <!-- ENLACES DE OPCIONES -->
       <div class="mt-8 text-center">
