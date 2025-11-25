@@ -140,4 +140,4 @@ dist
 .gemini
 .github
 
-.angular/cache
+*.angular
