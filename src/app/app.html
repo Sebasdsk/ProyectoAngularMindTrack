@@ -1,3 +1,4 @@
-
-<app-navbar></app-navbar>
+@if (currentUser()) {
+  <app-navbar></app-navbar>
+}
 <router-outlet />

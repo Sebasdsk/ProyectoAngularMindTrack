@@ -53,5 +53,6 @@ export class Navbar {
   async logout(): Promise<void> {
     await this.authService.logout();
     this.showUserMenu.set(false);
+    window.location.href = '/login';
   }
 }

@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Navbar } from "./shared/navbar/navbar";
+import { AuthService } from './services/auth';
 
 @Component({
   selector: 'app-root',
@@ -10,4 +11,9 @@ import { Navbar } from "./shared/navbar/navbar";
 })
 export class App {
   protected readonly title = signal('AppMindFlow');
+  private authService = inject(AuthService);
+
+  currentUser = this.authService.currentUser;
+
 }
+
