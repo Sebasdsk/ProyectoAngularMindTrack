@@ -1,4 +1,4 @@
-// src/app/services/emotion.service.ts
+
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
@@ -130,14 +130,20 @@ export class EmotionService {
         return { success: false, error: 'La intensidad debe estar entre 1 y 5' };
       }
 
+      // Obtener fecha y hora actuales
+      const now = new Date();
+      const fecha = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const hora = now.toTimeString().split(' ')[0]; // HH:MM:SS
+
       const { data, error } = await this.supabase.client
         .from('emociones')
         .insert({
           usuario_id: user.id,
-          emocion,
-          intensidad,
+          fecha: fecha,
+          hora: hora,
+          estado: emocion, // Mapear a 'estado' como espera la BD
+          valor_emocional: intensidad, // Mapear a 'valor_emocional'
           nota,
-          etiquetas,
         })
         .select()
         .single();
@@ -148,13 +154,13 @@ export class EmotionService {
         const newEmotion: Emocion = {
           id: data.id,
           usuario_id: data.usuario_id,
-          emocion: data.emocion,
-          intensidad: data.intensidad,
+          emocion: data.estado as TipoEmocion,
+          intensidad: data.valor_emocional,
           nota: data.nota,
           etiquetas: data.etiquetas,
-          fecha_registro: new Date(data.fecha_registro),
+          fecha_registro: new Date(data.created_at),
         };
-        this.emotionsSignal.update((emotions) => [...emotions, newEmotion]);
+        this.emotionsSignal.update((emotions) => [newEmotion, ...emotions]);
       }
 
       return { success: true };
@@ -172,7 +178,7 @@ export class EmotionService {
         .from('emociones')
         .select('*')
         .eq('usuario_id', user.id)
-        .order('fecha_registro', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -180,11 +186,11 @@ export class EmotionService {
         const emotions = data.map((e) => ({
           id: e.id,
           usuario_id: e.usuario_id,
-          emocion: e.emocion,
-          intensidad: e.intensidad,
+          emocion: e.estado as TipoEmocion,
+          intensidad: e.valor_emocional,
           nota: e.nota,
           etiquetas: e.etiquetas,
-          fecha_registro: new Date(e.fecha_registro),
+          fecha_registro: new Date(e.created_at),
         }));
         this.emotionsSignal.set(emotions);
       }

@@ -1,5 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+// src/app/shared/navbar/navbar.ts
+import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../services/auth';
 
 interface NavItem {
   label: string;
@@ -9,17 +11,21 @@ interface NavItem {
 
 @Component({
   selector: 'app-navbar',
-  standalone: true, // Componente standalone
-  imports: [RouterLink, RouterLinkActive], // No necesitas CommonModule para @for/@if
+  imports: [RouterLink, RouterLinkActive],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
-  changeDetection: ChangeDetectionStrategy.OnPush, // Mejor rendimiento
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Navbar {
-  // inject() es la forma moderna de inyectar dependencias
   private router = inject(Router);
+  private authService = inject(AuthService);
 
-  // Array de objetos para la navegación
+  // Datos del usuario actual
+  currentUser = this.authService.currentUser;
+
+  // Mostrar menú de usuario
+  showUserMenu = signal(false);
+
   readonly navItems: NavItem[] = [
     { label: 'Panel', path: '/dashboard', icon: '📊' },
     { label: 'Emociones', path: '/emotions', icon: '❤️' },
@@ -29,17 +35,23 @@ export class Navbar {
     { label: 'Ajustes', path: '/profile', icon: '⚙️' },
   ];
 
-  // Signal para manejar el estado del menú móvil
   mobileMenuOpen = signal(false);
 
-  // Alterna el estado del menú móvil
   toggleMobileMenu(): void {
     this.mobileMenuOpen.update((value) => !value);
   }
 
-  // Navega a una ruta y cierra el menú móvil
+  toggleUserMenu(): void {
+    this.showUserMenu.update((value) => !value);
+  }
+
   navigateTo(path: string): void {
     this.router.navigate([path]);
     this.mobileMenuOpen.set(false);
+  }
+
+  async logout(): Promise<void> {
+    await this.authService.logout();
+    this.showUserMenu.set(false);
   }
 }

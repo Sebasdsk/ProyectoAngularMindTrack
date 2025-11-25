@@ -1,5 +1,5 @@
 // src/app/login/login.ts
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, effect } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth';
@@ -20,6 +20,15 @@ export class Login {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
 
+  constructor() {
+    // Si ya está autenticado, redirigir al dashboard
+    effect(() => {
+      if (this.authService.isAuthenticated()) {
+        this.router.navigate(['/dashboard']);
+      }
+    });
+  }
+
   async onLogin(): Promise<void> {
     // Validación básica
     if (!this.email().trim() || !this.password().trim()) {
@@ -31,6 +40,12 @@ export class Login {
     this.errorMessage.set(null);
 
     try {
+      // IMPORTANTE: Primero cerrar cualquier sesión anterior
+      await this.authService.logout();
+
+      // Pequeña pausa para asegurar que la sesión se limpió
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       const result = await this.authService.login({
         email: this.email(),
         password: this.password(),
@@ -38,6 +53,7 @@ export class Login {
 
       if (result.success) {
         // Login exitoso - redirigir al dashboard
+        // El router.navigate ya lo hace el AuthService después de cargar el perfil
         this.router.navigate(['/dashboard']);
       } else {
         // Mostrar error
