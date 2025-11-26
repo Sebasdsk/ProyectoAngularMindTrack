@@ -1,18 +1,20 @@
 // src/app/focus/focus.ts
-import { ChangeDetectionStrategy, Component, signal, effect } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  signal,
+  effect,
+  inject,
+  computed,
+  OnDestroy,
+} from '@angular/core';
 import { Card } from '../shared/card/card';
 import { Button } from '../shared/button/button';
 import { Input } from '../shared/input/input';
 import { Badge } from '../shared/badge/badge';
+import { PomodoroService } from '../services/focus';
 
 type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
-
-interface PomodoroSession {
-  id: string;
-  duration: number;
-  type: TimerMode;
-  completedAt: Date;
-}
 
 @Component({
   selector: 'app-focus',
@@ -21,7 +23,9 @@ interface PomodoroSession {
   templateUrl: './focus.html',
   styleUrl: './focus.css',
 })
-export class Focus {
+export class Focus implements OnDestroy {
+  private pomodoroService = inject(PomodoroService);
+
   // Timer settings
   focusDuration = signal(25);
   shortBreakDuration = signal(5);
@@ -31,10 +35,11 @@ export class Focus {
   currentMode = signal<TimerMode>('focus');
   timeLeft = signal(25 * 60); // en segundos
   isRunning = signal(false);
-  sessionsCompleted = signal(0);
+  currentSessionId = signal<string | null>(null);
 
-  // History
-  pomodoroHistory = signal<PomodoroSession[]>([]);
+  // Datos del servicio
+  stats = this.pomodoroService.stats;
+  sessions = computed(() => this.pomodoroService.sessions().slice(0, 10));
 
   private timerInterval: any = null;
 
@@ -45,6 +50,10 @@ export class Focus {
         this.resetTimer();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.pauseTimer();
   }
 
   get minutes(): number {
@@ -99,8 +108,19 @@ export class Focus {
     }
   }
 
-  startTimer(): void {
+  async startTimer(): Promise<void> {
     if (this.isRunning()) return;
+
+    // Crear sesión en BD si es modo focus
+    if (this.currentMode() === 'focus' && !this.currentSessionId()) {
+      const result = await this.pomodoroService.startSession(
+        this.getDurationForMode(this.currentMode())
+      );
+
+      if (result.success && result.session) {
+        this.currentSessionId.set(result.session.id);
+      }
+    }
 
     this.isRunning.set(true);
     this.timerInterval = setInterval(() => {
@@ -124,24 +144,17 @@ export class Focus {
     this.pauseTimer();
     const duration = this.getDurationForMode(this.currentMode());
     this.timeLeft.set(duration * 60);
+    this.currentSessionId.set(null);
   }
 
-  completeSession(): void {
+  async completeSession(): Promise<void> {
     this.pauseTimer();
 
-    // Guardar sesión en el historial
-    const session: PomodoroSession = {
-      id: Date.now().toString(),
-      duration: this.getDurationForMode(this.currentMode()),
-      type: this.currentMode(),
-      completedAt: new Date(),
-    };
-
-    this.pomodoroHistory.update((history) => [session, ...history.slice(0, 9)]);
-
-    // Si completó una sesión de enfoque, incrementar contador
-    if (this.currentMode() === 'focus') {
-      this.sessionsCompleted.update((c) => c + 1);
+    // Marcar sesión como completada si es focus
+    const sessionId = this.currentSessionId();
+    if (this.currentMode() === 'focus' && sessionId) {
+      await this.pomodoroService.completeSession(sessionId);
+      this.currentSessionId.set(null);
     }
 
     // Cambiar automáticamente al siguiente modo
@@ -153,10 +166,11 @@ export class Focus {
 
   autoSwitchMode(): void {
     const current = this.currentMode();
+    const completedSessions = this.stats().totalSesiones;
 
     if (current === 'focus') {
       // Después de 4 sesiones de enfoque, tomar descanso largo
-      if (this.sessionsCompleted() % 4 === 0 && this.sessionsCompleted() > 0) {
+      if (completedSessions > 0 && completedSessions % 4 === 0) {
         this.switchMode('longBreak');
       } else {
         this.switchMode('shortBreak');
@@ -218,12 +232,43 @@ export class Focus {
   }
 
   formatSessionTime(date: Date): string {
-    return date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
-  get totalFocusTime(): number {
-    return this.pomodoroHistory()
-      .filter((s) => s.type === 'focus')
-      .reduce((sum, s) => sum + s.duration, 0);
+  formatSessionDate(date: Date): string {
+    const today = new Date();
+    const sessionDate = new Date(date);
+
+    if (sessionDate.toDateString() === today.toDateString()) {
+      return 'Hoy';
+    }
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (sessionDate.toDateString() === yesterday.toDateString()) {
+      return 'Ayer';
+    }
+
+    return sessionDate.toLocaleDateString('es-MX', {
+      day: 'numeric',
+      month: 'short',
+    });
+  }
+
+  getSessionTypeLabel(tipo: string): string {
+    switch (tipo) {
+      case 'trabajo':
+        return 'Enfoque';
+      case 'descanso_corto':
+        return 'Descanso Corto';
+      case 'descanso_largo':
+        return 'Descanso Largo';
+      default:
+        return tipo;
+    }
   }
 }

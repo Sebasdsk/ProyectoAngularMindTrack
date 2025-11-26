@@ -16,7 +16,7 @@
     <app-card [padding]="'md'" [hover]="true">
       <div class="text-center">
         <div class="text-3xl mb-2">🎯</div>
-        <p class="text-2xl font-bold text-green-600">{{ sessionsCompleted() }}</p>
+        <p class="text-2xl font-bold text-green-600">{{ stats().totalSesiones }}</p>
         <p class="text-sm text-gray-600">Sesiones</p>
       </div>
     </app-card>
@@ -24,16 +24,16 @@
     <app-card [padding]="'md'" [hover]="true">
       <div class="text-center">
         <div class="text-3xl mb-2">⏰</div>
-        <p class="text-2xl font-bold text-blue-600">{{ totalFocusTime }}</p>
+        <p class="text-2xl font-bold text-blue-600">{{ stats().totalMinutes }}</p>
         <p class="text-sm text-gray-600">Minutos totales</p>
       </div>
     </app-card>
 
     <app-card [padding]="'md'" [hover]="true" class="col-span-2 md:col-span-1">
       <div class="text-center">
-        <div class="text-3xl mb-2">🔥</div>
-        <p class="text-2xl font-bold text-orange-600">{{ sessionsCompleted() % 4 }}</p>
-        <p class="text-sm text-gray-600">Hasta descanso largo</p>
+        <div class="text-3xl mb-2">📅</div>
+        <p class="text-2xl font-bold text-orange-600">{{ stats().estaSemana }}</p>
+        <p class="text-sm text-gray-600">Esta semana</p>
       </div>
     </app-card>
   </div>
@@ -44,31 +44,37 @@
     <div class="flex justify-center gap-3 mb-8">
       <button
         (click)="switchMode('focus')"
+        [disabled]="isRunning()"
         [class]="[
           'px-6 py-2 rounded-lg font-medium transition-all',
           currentMode() === 'focus'
             ? 'bg-green-600 text-white shadow-lg scale-105'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+          isRunning() ? 'opacity-50 cursor-not-allowed' : ''
         ].join(' ')">
         🎯 Enfoque
       </button>
       <button
         (click)="switchMode('shortBreak')"
+        [disabled]="isRunning()"
         [class]="[
           'px-6 py-2 rounded-lg font-medium transition-all',
           currentMode() === 'shortBreak'
             ? 'bg-blue-600 text-white shadow-lg scale-105'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+          isRunning() ? 'opacity-50 cursor-not-allowed' : ''
         ].join(' ')">
         ☕ Descanso
       </button>
       <button
         (click)="switchMode('longBreak')"
+        [disabled]="isRunning()"
         [class]="[
           'px-6 py-2 rounded-lg font-medium transition-all',
           currentMode() === 'longBreak'
             ? 'bg-purple-600 text-white shadow-lg scale-105'
-            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+          isRunning() ? 'opacity-50 cursor-not-allowed' : ''
         ].join(' ')">
         🌴 Descanso Largo
       </button>
@@ -142,6 +148,7 @@
         [variant]="'ghost'"
         [size]="'lg'"
         [icon]="'🔄'"
+        [disabled]="isRunning()"
         (clicked)="resetTimer()">
         Reiniciar
       </app-button>
@@ -168,10 +175,13 @@
           type="number"
           [value]="focusDuration()"
           (input)="updateFocusDuration($any($event.target).value)"
+          [disabled]="isRunning()"
           min="1"
           max="60"
           placeholder="Tiempo de Enfoque (min)"
-          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg
+                 focus:border-green-500 focus:outline-none
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -183,10 +193,13 @@
           type="number"
           [value]="shortBreakDuration()"
           (input)="updateShortBreakDuration($any($event.target).value)"
+          [disabled]="isRunning()"
           min="1"
           max="30"
           placeholder="Descanso Corto (min)"
-          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg
+                 focus:border-blue-500 focus:outline-none
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -198,17 +211,20 @@
           type="number"
           [value]="longBreakDuration()"
           (input)="updateLongBreakDuration($any($event.target).value)"
+          [disabled]="isRunning()"
           min="1"
           max="60"
           placeholder="Descanso Largo (min)"
-          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+          class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg
+                 focus:border-purple-500 focus:outline-none
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </div>
     </div>
   </app-card>
 
   <!-- History -->
-  @if (pomodoroHistory().length > 0) {
+  @if (sessions().length > 0) {
     <app-card [padding]="'lg'">
       <div header>
         <h2 class="text-xl font-semibold text-gray-900">
@@ -220,21 +236,23 @@
       </div>
 
       <div class="space-y-2">
-        @for (session of pomodoroHistory(); track session.id) {
+        @for (session of sessions(); track session.id) {
           <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3">
-              <span class="text-2xl">{{ getModeIcon(session.type) }}</span>
+              <span class="text-2xl">🎯</span>
               <div>
                 <p class="font-medium text-gray-900">
-                  {{ getModeLabel(session.type) }}
+                  Sesión de {{ session.duracion_minutos }} minutos
                 </p>
                 <p class="text-sm text-gray-600">
-                  {{ session.duration }} minutos
+                  {{ formatSessionDate(session.fecha_inicio) }} a las {{ formatSessionTime(session.fecha_inicio) }}
                 </p>
               </div>
             </div>
-            <app-badge [variant]="'neutral'" [size]="'sm'">
-              {{ formatSessionTime(session.completedAt) }}
+            <app-badge
+              [variant]="session.completada ? 'success' : 'neutral'"
+              [size]="'sm'">
+              {{ session.completada ? '✓ Completada' : 'Iniciada' }}
             </app-badge>
           </div>
         }

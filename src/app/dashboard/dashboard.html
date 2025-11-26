@@ -61,28 +61,38 @@
         <h2 class="text-xl font-semibold text-gray-900">
           Distribución de Emociones
         </h2>
-        <p class="text-sm text-gray-600 mt-1">Últimos 30 días</p>
+        <p class="text-sm text-gray-600 mt-1">Últimas 7 emociones</p>
       </div>
 
-      <div class="space-y-4">
-        @for (stat of emotionStats(); track stat.emotion) {
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <span class="text-2xl">{{ stat.emoji }}</span>
-                <span class="text-sm font-medium text-gray-700">{{ stat.emotion }}</span>
+      @if (emotionDistribution().length === 0) {
+        <div class="text-center py-8">
+          <div class="text-4xl mb-2">😊</div>
+          <p class="text-gray-600 text-sm">Registra tus emociones para ver estadísticas</p>
+          <a routerLink="/emotions" class="text-green-600 hover:text-green-700 font-medium text-sm mt-2 inline-block">
+            Ir a Emociones →
+          </a>
+        </div>
+      } @else {
+        <div class="space-y-4">
+          @for (stat of emotionDistribution(); track stat.emotion) {
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">{{ stat.emoji }}</span>
+                  <span class="text-sm font-medium text-gray-700">{{ stat.emotion }}</span>
+                </div>
+                <span class="text-sm text-gray-600">{{ stat.count }} veces ({{ stat.percentage }}%)</span>
               </div>
-              <span class="text-sm text-gray-600">{{ stat.count }} veces</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                [class]="stat.color + ' h-full rounded-full transition-all duration-500'"
-                [style.width.%]="stat.percentage">
+              <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  [class]="stat.color + ' h-full rounded-full transition-all duration-500'"
+                  [style.width.%]="stat.percentage">
+                </div>
               </div>
             </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     </app-card>
 
     <!-- Progreso de Tareas -->
@@ -91,81 +101,179 @@
         <h2 class="text-xl font-semibold text-gray-900">
           Progreso de Tareas
         </h2>
-        <p class="text-sm text-gray-600 mt-1">Esta semana</p>
+        <p class="text-sm text-gray-600 mt-1">Total</p>
       </div>
 
-      <div class="flex items-center justify-center py-8">
-        <div class="relative w-48 h-48">
-          <!-- Circle Progress -->
-          <svg class="w-full h-full transform -rotate-90">
-            <circle
-              cx="96"
-              cy="96"
-              r="88"
-              stroke="currentColor"
-              stroke-width="12"
-              fill="none"
-              class="text-gray-200"
-            />
-            <circle
-              cx="96"
-              cy="96"
-              r="88"
-              stroke="currentColor"
-              stroke-width="12"
-              fill="none"
-              [attr.stroke-dasharray]="2 * 3.14159 * 88"
-              [attr.stroke-dashoffset]="2 * 3.14159 * 88 * (1 - completionRate() / 100)"
-              class="text-green-600 transition-all duration-500"
-            />
-          </svg>
-          <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-4xl font-bold text-gray-900">{{ completionRate() }}%</span>
-            <span class="text-sm text-gray-600 mt-1">Completado</span>
+      @if (totalTasks() === 0) {
+        <div class="text-center py-8">
+          <div class="text-4xl mb-2">📝</div>
+          <p class="text-gray-600 text-sm">Crea tareas para ver tu progreso</p>
+          <a routerLink="/tasks" class="text-green-600 hover:text-green-700 font-medium text-sm mt-2 inline-block">
+            Ir a Tareas →
+          </a>
+        </div>
+      } @else {
+        <div class="flex items-center justify-center py-8">
+          <div class="relative w-48 h-48">
+            <!-- Circle Progress -->
+            <svg class="w-full h-full transform -rotate-90">
+              <circle
+                cx="96"
+                cy="96"
+                r="88"
+                stroke="currentColor"
+                stroke-width="12"
+                fill="none"
+                class="text-gray-200"
+              />
+              <circle
+                cx="96"
+                cy="96"
+                r="88"
+                stroke="currentColor"
+                stroke-width="12"
+                fill="none"
+                [attr.stroke-dasharray]="2 * 3.14159 * 88"
+                [attr.stroke-dashoffset]="2 * 3.14159 * 88 * (1 - completionRate() / 100)"
+                class="text-green-600 transition-all duration-500"
+              />
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-4xl font-bold text-gray-900">{{ completionRate() }}%</span>
+              <span class="text-sm text-gray-600 mt-1">Completado</span>
+            </div>
           </div>
+        </div>
+
+        <div class="text-center text-sm text-gray-600">
+          <p>{{ tasksCompleted() }} de {{ totalTasks() }} tareas completadas</p>
+        </div>
+      }
+    </app-card>
+
+  </div>
+
+  <!-- Stats adicionales -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Stats de Diario -->
+    <app-card [padding]="'lg'">
+      <div header>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">
+              Diario 📖
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">Tu actividad de escritura</p>
+          </div>
+          <a
+            routerLink="/diary"
+            class="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
+            Ver todo →
+          </a>
         </div>
       </div>
 
-      <div class="text-center text-sm text-gray-600">
-        <p>{{ tasksCompleted() }} de {{ totalTasks() }} tareas completadas</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().total }}</p>
+          <p class="text-xs text-gray-600 mt-1">Entradas totales</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().estaSemana }}</p>
+          <p class="text-xs text-gray-600 mt-1">Esta semana</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().esteMes }}</p>
+          <p class="text-xs text-gray-600 mt-1">Este mes</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().favoritos }}</p>
+          <p class="text-xs text-gray-600 mt-1">Favoritos</p>
+        </div>
+      </div>
+    </app-card>
+
+    <!-- Stats de Pomodoro -->
+    <app-card [padding]="'lg'">
+      <div header>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">
+              Enfoque ⏱️
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">Tus sesiones Pomodoro</p>
+          </div>
+          <a
+            routerLink="/focus"
+            class="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
+            Ver todo →
+          </a>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().totalSesiones }}</p>
+          <p class="text-xs text-gray-600 mt-1">Sesiones</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().totalHoras }}</p>
+          <p class="text-xs text-gray-600 mt-1">Horas totales</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().estaSemana }}</p>
+          <p class="text-xs text-gray-600 mt-1">Esta semana</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().promedioDiario }}</p>
+          <p class="text-xs text-gray-600 mt-1">Min/día promedio</p>
+        </div>
       </div>
     </app-card>
 
   </div>
 
   <!-- Recent Journal Entries -->
-  <app-card [padding]="'lg'">
-    <div header>
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-xl font-semibold text-gray-900">
-            Entradas Recientes del Diario
-          </h2>
-          <p class="text-sm text-gray-600 mt-1">Tus últimas reflexiones</p>
-        </div>
-        <a
-          routerLink="/diary"
-          class="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
-          Ver todas →
-        </a>
-      </div>
-    </div>
-
-    <div class="space-y-3">
-      @for (entry of recentJournalEntries(); track entry.id) {
-        <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-medium text-gray-900 mb-1">{{ entry.title }}</h3>
-              <p class="text-sm text-gray-600 line-clamp-2">{{ entry.preview }}</p>
-            </div>
-            <app-badge [variant]="'neutral'" [size]="'sm'">
-              {{ formatDate(entry.date) }}
-            </app-badge>
+  @if (recentJournalEntries().length > 0) {
+    <app-card [padding]="'lg'">
+      <div header>
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">
+              Entradas Recientes del Diario
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">Tus últimas reflexiones</p>
           </div>
+          <a
+            routerLink="/diary"
+            class="text-green-600 hover:text-green-700 font-medium text-sm transition-colors">
+            Ver todas →
+          </a>
         </div>
-      }
-    </div>
-  </app-card>
+      </div>
+
+      <div class="space-y-3">
+        @for (entry of recentJournalEntries(); track entry.id) {
+          <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  @if (entry.emocion) {
+                    <span class="text-xl">{{ entry.emocion }}</span>
+                  }
+                  <h3 class="font-medium text-gray-900">{{ entry.titulo }}</h3>
+                </div>
+                <p class="text-sm text-gray-600 line-clamp-2">{{ getPreview(entry.contenido) }}</p>
+              </div>
+              <app-badge [variant]="'neutral'" [size]="'sm'">
+                {{ formatDate(entry.fecha_creacion) }}
+              </app-badge>
+            </div>
+          </div>
+        }
+      </div>
+    </app-card>
+  }
 
 </div>

@@ -1,9 +1,13 @@
 // src/app/dashboard/dashboard.ts
-import { Component, ChangeDetectionStrategy, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Card } from '../shared/card/card';
 import { Badge } from '../shared/badge/badge';
 import { Button } from '../shared/button/button';
+import { EmotionService } from '../services/emotion';
+import { TaskService } from '../services/tasks';
+import { DiaryService } from '../services/diary';
+import { PomodoroService } from '../services/focus';
 
 interface EmotionStat {
   emotion: string;
@@ -11,13 +15,6 @@ interface EmotionStat {
   count: number;
   percentage: number;
   color: string;
-}
-
-interface JournalEntry {
-  id: string;
-  date: string;
-  title: string;
-  preview: string;
 }
 
 @Component({
@@ -28,51 +25,72 @@ interface JournalEntry {
   styleUrl: './dashboard.css',
 })
 export class Dashboard {
-  // Mock data - Estadísticas de emociones
-  emotionStats = signal<EmotionStat[]>([
-    { emotion: 'Feliz', emoji: '😊', count: 15, percentage: 35, color: 'bg-green-500' },
-    { emotion: 'Tranquilo', emoji: '😌', count: 12, percentage: 28, color: 'bg-blue-500' },
-    { emotion: 'Triste', emoji: '😔', count: 8, percentage: 19, color: 'bg-gray-500' },
-    { emotion: 'Ansioso', emoji: '😰', count: 5, percentage: 12, color: 'bg-yellow-500' },
-    { emotion: 'Enojado', emoji: '😡', count: 3, percentage: 7, color: 'bg-red-500' },
-  ]);
+  private emotionService = inject(EmotionService);
+  private taskService = inject(TaskService);
+  private diaryService = inject(DiaryService);
+  private pomodoroService = inject(PomodoroService);
 
-  // Mock data - Últimas entradas del diario
-  recentJournalEntries = signal<JournalEntry[]>([
-    {
-      id: '1',
-      date: '2025-11-11',
-      title: 'Reflexión del día',
-      preview: 'Hoy fue un día productivo. Logré completar varias tareas importantes...',
-    },
-    {
-      id: '2',
-      date: '2025-11-10',
-      title: 'Momento de gratitud',
-      preview: 'Agradezco por la oportunidad de aprender algo nuevo cada día...',
-    },
-    {
-      id: '3',
-      date: '2025-11-09',
-      title: 'Metas semanales',
-      preview: 'Esta semana quiero enfocarme en mejorar mis hábitos de sueño...',
-    },
-  ]);
+  // Stats de los servicios
+  emotionStats = this.emotionService.emotionStats;
+  taskStats = this.taskService.stats;
+  diaryStats = this.diaryService.stats;
+  pomodoroStats = this.pomodoroService.stats;
 
-  // Estadísticas generales
-  currentStreak = signal(7);
-  tasksCompleted = signal(24);
-  totalTasks = signal(32);
-  pomodoroSessions = signal(12);
+  // Datos para el dashboard
+  recentEmotions = computed(() => this.emotionService.recentEmotions().slice(0, 7));
+  recentJournalEntries = computed(() => this.diaryService.recentEntries().slice(0, 3));
 
-  // Computed values
-  totalEmotions = computed(() => this.emotionStats().reduce((sum, stat) => sum + stat.count, 0));
+  // Distribución de emociones con porcentajes
+  emotionDistribution = computed(() => {
+    const emotions = this.recentEmotions();
+    const total = emotions.length;
 
-  completionRate = computed(() => Math.round((this.tasksCompleted() / this.totalTasks()) * 100));
+    if (total === 0) return [];
 
-  focusTime = computed(() => this.pomodoroSessions() * 25);
+    // Contar cada tipo de emoción
+    const counts = emotions.reduce((acc, e) => {
+      acc[e.emocion] = (acc[e.emocion] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
-  formatDate(dateString: string): string {
+    // Convertir a array con porcentajes
+    const distribution: EmotionStat[] = Object.entries(counts).map(([emotion, count]) => {
+      const config = this.emotionService.configuracionEmociones[emotion as keyof typeof this.emotionService.configuracionEmociones];
+      return {
+        emotion: config?.label || emotion,
+        emoji: config?.emoji || '😐',
+        count,
+        percentage: Math.round((count / total) * 100),
+        color: this.getColorForEmotion(emotion),
+      };
+    });
+
+    // Ordenar por cantidad
+    return distribution.sort((a, b) => b.count - a.count);
+  });
+
+  // Racha actual (simplificado - días con al menos una emoción)
+  currentStreak = computed(() => this.diaryStats().racha);
+
+  // Total de emociones
+  totalEmotions = computed(() => this.emotionStats().total);
+
+  // Tasa de completitud de tareas
+  completionRate = computed(() => this.taskStats().tasaCompletitud);
+
+  // Tareas completadas
+  tasksCompleted = computed(() => this.taskStats().completadas);
+
+  // Total de tareas
+  totalTasks = computed(() => this.taskStats().total);
+
+  // Tiempo de enfoque (minutos)
+  focusTime = computed(() => this.pomodoroStats().totalMinutes);
+
+  // Sesiones de pomodoro completadas
+  pomodoroSessions = computed(() => this.pomodoroStats().totalSesiones);
+
+  formatDate(dateString: Date): string {
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today);
@@ -88,5 +106,22 @@ export class Dashboard {
         month: 'short',
       });
     }
+  }
+
+  getColorForEmotion(emotion: string): string {
+    const colors: Record<string, string> = {
+      feliz: 'bg-green-500',
+      tranquilo: 'bg-blue-500',
+      emocionado: 'bg-yellow-500',
+      triste: 'bg-gray-500',
+      ansioso: 'bg-purple-500',
+      enojado: 'bg-red-500',
+      cansado: 'bg-indigo-500',
+    };
+    return colors[emotion] || 'bg-gray-500';
+  }
+
+  getPreview(content: string, maxLength: number = 100): string {
+    return content.length > maxLength ? content.substring(0, maxLength) + '...' : content;
   }
 }
