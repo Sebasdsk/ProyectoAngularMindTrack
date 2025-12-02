@@ -1,0 +1,327 @@
+<!-- src/app/profile/profile.html -->
+<div class="p-4 md:p-6 space-y-6 animate-fadeIn">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+      Mi Perfil ⚙️
+    </h1>
+    <p class="text-gray-600">
+      Administra tu cuenta y configuración
+    </p>
+  </div>
+
+  <!-- Mensajes -->
+  @if (successMessage()) {
+    <div class="p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg animate-fadeIn">
+      {{ successMessage() }}
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-fadeIn">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <!-- Información del Usuario -->
+  <app-card [padding]="'lg'">
+    <div class="flex flex-col md:flex-row items-center gap-6">
+      <!-- Avatar -->
+      <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+        {{ getInitials(currentUser()?.nombre || 'U') }}
+      </div>
+
+      <!-- Info -->
+      <div class="flex-1 text-center md:text-left">
+        <h2 class="text-2xl font-bold text-gray-900">{{ currentUser()?.nombre }}</h2>
+        <p class="text-gray-600">{{ currentUser()?.email }}</p>
+        @if (currentUser()?.edad) {
+          <p class="text-sm text-gray-500 mt-1">{{ currentUser()?.edad }} años</p>
+        }
+        @if (currentUser()?.ocupacion) {
+          <app-badge [variant]="'info'" [size]="'sm'" class="mt-2">
+            {{ currentUser()?.ocupacion }}
+          </app-badge>
+        }
+        <p class="text-xs text-gray-500 mt-2">
+          Miembro desde {{ memberSince() }}
+        </p>
+      </div>
+
+      <!-- Botones -->
+      <div class="flex flex-col gap-2">
+        <app-button
+          [variant]="'primary'"
+          [size]="'sm'"
+          [icon]="'✏️'"
+          (clicked)="openEditModal()">
+          Editar Perfil
+        </app-button>
+        <app-button
+          [variant]="'secondary'"
+          [size]="'sm'"
+          [icon]="'🔒'"
+          (clicked)="showPasswordModal.set(true)">
+          Cambiar Contraseña
+        </app-button>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Estadísticas del Usuario -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Tus Estadísticas 📊
+      </h2>
+      <p class="text-sm text-gray-600 mt-1">Resumen de tu actividad</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div class="text-center p-4 bg-red-50 rounded-lg">
+        <div class="text-3xl mb-2">❤️</div>
+        <p class="text-2xl font-bold text-red-600">{{ userStats().emociones }}</p>
+        <p class="text-sm text-gray-600">Emociones</p>
+      </div>
+
+      <div class="text-center p-4 bg-green-50 rounded-lg">
+        <div class="text-3xl mb-2">✅</div>
+        <p class="text-2xl font-bold text-green-600">{{ userStats().tareasCompletadas }}</p>
+        <p class="text-sm text-gray-600">Tareas completadas</p>
+      </div>
+
+      <div class="text-center p-4 bg-purple-50 rounded-lg">
+        <div class="text-3xl mb-2">📖</div>
+        <p class="text-2xl font-bold text-purple-600">{{ userStats().entradas }}</p>
+        <p class="text-sm text-gray-600">Entradas de diario</p>
+      </div>
+
+      <div class="text-center p-4 bg-blue-50 rounded-lg">
+        <div class="text-3xl mb-2">⏱️</div>
+        <p class="text-2xl font-bold text-blue-600">{{ userStats().pomodoros }}</p>
+        <p class="text-sm text-gray-600">Sesiones Pomodoro</p>
+      </div>
+
+      <div class="text-center p-4 bg-orange-50 rounded-lg">
+        <div class="text-3xl mb-2">🔥</div>
+        <p class="text-2xl font-bold text-orange-600">{{ userStats().minutosEnfoque }}</p>
+        <p class="text-sm text-gray-600">Minutos de enfoque</p>
+      </div>
+
+      <div class="text-center p-4 bg-gray-50 rounded-lg">
+        <div class="text-3xl mb-2">📝</div>
+        <p class="text-2xl font-bold text-gray-600">{{ userStats().tareas }}</p>
+        <p class="text-sm text-gray-600">Total de tareas</p>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Configuración y Acciones -->
+  <app-card [padding]="'lg'">
+    <div header>
+      <h2 class="text-xl font-semibold text-gray-900">
+        Configuración 🔧
+      </h2>
+    </div>
+
+    <div class="space-y-3">
+      <button
+        (click)="logout()"
+        class="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🚪</span>
+          <div class="text-left">
+            <p class="font-medium text-gray-900">Cerrar Sesión</p>
+            <p class="text-sm text-gray-600">Salir de tu cuenta</p>
+          </div>
+        </div>
+        <span class="text-gray-400">→</span>
+      </button>
+
+      <button
+        (click)="showDeleteModal.set(true)"
+        class="w-full flex items-center justify-between p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">⚠️</span>
+          <div class="text-left">
+            <p class="font-medium text-red-600">Eliminar Cuenta</p>
+            <p class="text-sm text-red-500">Esta acción no se puede deshacer</p>
+          </div>
+        </div>
+        <span class="text-red-400">→</span>
+      </button>
+    </div>
+  </app-card>
+
+  <!-- Modal Editar Perfil -->
+  <app-modal
+    [isOpen]="showEditModal()"
+    [title]="'Editar Perfil'"
+    [hasFooter]="true"
+    (closed)="closeModals()">
+
+    <div class="space-y-4">
+      @if (errorMessage()) {
+        <div class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <app-input
+        [(value)]="editNombre"
+        [label]="'Nombre completo'"
+        [placeholder]="'Tu nombre'"
+        [required]="true"
+        [icon]="'👤'"
+        [disabled]="isSaving()"
+      />
+
+      <div>
+        <label for="editFechaNacimiento" class="block text-sm font-medium text-gray-700 mb-2">
+          Fecha de nacimiento (opcional)
+        </label>
+        <input
+          id="editFechaNacimiento"
+          type="date"
+          [(ngModel)]="editFechaNacimiento"
+          [disabled]="isSaving()"
+          title="Fecha de nacimiento (opcional)"
+          placeholder="Fecha de nacimiento"
+          class="w-full px-4 py-3 bg-white border-2 border-gray-200 rounded-xl
+                 focus:outline-none focus:border-green-600 transition-all duration-200
+                 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        />
+      </div>
+
+      <app-input
+        [(value)]="editOcupacion"
+        [label]="'Ocupación (opcional)'"
+        [placeholder]="'Ej: Estudiante, Profesional'"
+        [icon]="'💼'"
+        [disabled]="isSaving()"
+      />
+    </div>
+
+    <div footer class="flex gap-3">
+      <app-button
+        [variant]="'secondary'"
+        [disabled]="isSaving()"
+        (clicked)="closeModals()">
+        Cancelar
+      </app-button>
+      <app-button
+        [variant]="'primary'"
+        [disabled]="!editNombre().trim() || isSaving()"
+        [loading]="isSaving()"
+        (clicked)="saveProfile()">
+        Guardar Cambios
+      </app-button>
+    </div>
+  </app-modal>
+
+  <!-- Modal Cambiar Contraseña -->
+  <app-modal
+    [isOpen]="showPasswordModal()"
+    [title]="'Cambiar Contraseña'"
+    [hasFooter]="true"
+    (closed)="closeModals()">
+
+    <div class="space-y-4">
+      @if (errorMessage()) {
+        <div class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <app-input
+        [(value)]="currentPassword"
+        [label]="'Contraseña actual'"
+        [type]="'password'"
+        [placeholder]="'Tu contraseña actual'"
+        [required]="true"
+        [icon]="'🔒'"
+        [disabled]="isSaving()"
+      />
+
+      <app-input
+        [(value)]="newPassword"
+        [label]="'Nueva contraseña'"
+        [type]="'password'"
+        [placeholder]="'Mínimo 6 caracteres'"
+        [required]="true"
+        [icon]="'🔑'"
+        [disabled]="isSaving()"
+      />
+
+      <app-input
+        [(value)]="confirmNewPassword"
+        [label]="'Confirmar nueva contraseña'"
+        [type]="'password'"
+        [placeholder]="'Repite la contraseña'"
+        [required]="true"
+        [icon]="'✓'"
+        [disabled]="isSaving()"
+      />
+    </div>
+
+    <div footer class="flex gap-3">
+      <app-button
+        [variant]="'secondary'"
+        [disabled]="isSaving()"
+        (clicked)="closeModals()">
+        Cancelar
+      </app-button>
+      <app-button
+        [variant]="'primary'"
+        [disabled]="!currentPassword() || !newPassword() || !confirmNewPassword() || isSaving()"
+        [loading]="isSaving()"
+        (clicked)="changePassword()">
+        Cambiar Contraseña
+      </app-button>
+    </div>
+  </app-modal>
+
+  <!-- Modal Eliminar Cuenta -->
+  <app-modal
+    [isOpen]="showDeleteModal()"
+    [title]="'⚠️ Eliminar Cuenta'"
+    [hasFooter]="true"
+    (closed)="closeModals()">
+
+    <div class="space-y-4">
+      <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <p class="text-red-800 font-medium mb-2">Esta acción es permanente</p>
+        <p class="text-sm text-red-600">
+          Se eliminarán todos tus datos:
+        </p>
+        <ul class="text-sm text-red-600 list-disc list-inside mt-2">
+          <li>Todas tus emociones registradas</li>
+          <li>Todas tus entradas de diario</li>
+          <li>Todas tus tareas</li>
+          <li>Todo tu historial de Pomodoro</li>
+        </ul>
+      </div>
+
+      <p class="text-sm text-gray-600">
+        ¿Estás seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.
+      </p>
+    </div>
+
+    <div footer class="flex gap-3">
+      <app-button
+        [variant]="'secondary'"
+        [disabled]="isSaving()"
+        (clicked)="closeModals()">
+        Cancelar
+      </app-button>
+      <app-button
+        [variant]="'danger'"
+        [loading]="isSaving()"
+        (clicked)="deleteAccount()">
+        Sí, Eliminar Mi Cuenta
+      </app-button>
+    </div>
+  </app-modal>
+
+</div>
