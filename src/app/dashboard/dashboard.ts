@@ -19,7 +19,7 @@ interface EmotionStat {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [Card, Badge, Button, RouterLink],
+  imports: [Card, Badge, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
