@@ -12,7 +12,7 @@ import { Navbar } from '../../shared/navbar/navbar';
   templateUrl: './component-showcase.html',
   styleUrl: './component-showcase.css',
   // Asegúrate de importar los componentes que vas a usar en la plantilla
-  imports: [FormsModule, Button, Card, Input, Navbar],
+  imports: [FormsModule, Button, Card, Input],
 })
 
 export class ComponentShowcase {

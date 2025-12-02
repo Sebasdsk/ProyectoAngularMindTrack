@@ -18,7 +18,7 @@ type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 
 @Component({
   selector: 'app-focus',
-  imports: [Card, Button, Input, Badge],
+  imports: [Card, Button, Badge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './focus.html',
   styleUrl: './focus.css',
