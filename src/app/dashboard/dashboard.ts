@@ -1,6 +1,7 @@
 // src/app/dashboard/dashboard.ts
 import { Component, ChangeDetectionStrategy, signal, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Card } from '../shared/card/card';
 import { Badge } from '../shared/badge/badge';
 import { Button } from '../shared/button/button';
@@ -19,7 +20,7 @@ interface EmotionStat {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [Card, Badge, RouterLink],
+  imports: [Card, Badge, RouterLink, Button, FormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
@@ -30,32 +31,175 @@ export class Dashboard {
   private diaryService = inject(DiaryService);
   private pomodoroService = inject(PomodoroService);
 
-  // Stats de los servicios
-  emotionStats = this.emotionService.emotionStats;
-  taskStats = this.taskService.stats;
-  diaryStats = this.diaryService.stats;
-  pomodoroStats = this.pomodoroService.stats;
 
-  // Datos para el dashboard
-  recentEmotions = computed(() => this.emotionService.recentEmotions().slice(0, 7));
-  recentJournalEntries = computed(() => this.diaryService.recentEntries().slice(0, 3));
 
-  // Distribución de emociones con porcentajes
+  // Filtros de fecha
+  startDate = signal<string>('');
+  endDate = signal<string>('');
+  showFilters = signal(false);
+
+  // Stats de los servicios (SIN filtros - totales)
+  totalEmotionStats = this.emotionService.emotionStats;
+  totalTaskStats = this.taskService.stats;
+  totalDiaryStats = this.diaryService.stats;
+  totalPomodoroStats = this.pomodoroService.stats;
+
+  // Emociones filtradas
+  filteredEmotions = computed(() => {
+    const start = this.startDate();
+    const end = this.endDate();
+
+    if (!start && !end) {
+      return this.emotionService.recentEmotions();
+    }
+
+    const startDateObj = start ? new Date(start) : null;
+    const endDateObj = end ? new Date(end) : null;
+
+    if (endDateObj) {
+      endDateObj.setHours(23, 59, 59, 999);
+    }
+
+    return this.emotionService.recentEmotions().filter((emotion) => {
+      const emotionDate = new Date(emotion.fecha_registro);
+
+      if (startDateObj && emotionDate < startDateObj) return false;
+      if (endDateObj && emotionDate > endDateObj) return false;
+
+      return true;
+    });
+  });
+
+  // Entradas de diario filtradas
+  filteredJournalEntries = computed(() => {
+    const start = this.startDate();
+    const end = this.endDate();
+
+    if (!start && !end) {
+      return this.diaryService.recentEntries().slice(0, 3);
+    }
+
+    const startDateObj = start ? new Date(start) : null;
+    const endDateObj = end ? new Date(end) : null;
+
+    if (endDateObj) {
+      endDateObj.setHours(23, 59, 59, 999);
+    }
+
+    return this.diaryService
+      .recentEntries()
+      .filter((entry) => {
+        const entryDate = new Date(entry.fecha_creacion);
+
+        if (startDateObj && entryDate < startDateObj) return false;
+        if (endDateObj && entryDate > endDateObj) return false;
+
+        return true;
+      })
+      .slice(0, 3);
+  });
+
+  // Tareas filtradas
+  filteredTasks = computed(() => {
+    const start = this.startDate();
+    const end = this.endDate();
+
+    if (!start && !end) {
+      return this.taskService.tasks();
+    }
+
+    const startDateObj = start ? new Date(start) : null;
+    const endDateObj = end ? new Date(end) : null;
+
+    if (endDateObj) {
+      endDateObj.setHours(23, 59, 59, 999);
+    }
+
+    return this.taskService.tasks().filter((task) => {
+      const taskDate = new Date(task.fecha_creacion);
+
+      if (startDateObj && taskDate < startDateObj) return false;
+      if (endDateObj && taskDate > endDateObj) return false;
+
+      return true;
+    });
+  });
+
+  // Sesiones Pomodoro filtradas
+  filteredPomodoroSessions = computed(() => {
+    const start = this.startDate();
+    const end = this.endDate();
+
+    if (!start && !end) {
+      return this.pomodoroService.sessions();
+    }
+
+    const startDateObj = start ? new Date(start) : null;
+    const endDateObj = end ? new Date(end) : null;
+
+    if (endDateObj) {
+      endDateObj.setHours(23, 59, 59, 999);
+    }
+
+    return this.pomodoroService.sessions().filter((session) => {
+      const sessionDate = new Date(session.fecha_inicio);
+
+      if (startDateObj && sessionDate < startDateObj) return false;
+      if (endDateObj && sessionDate > endDateObj) return false;
+
+      return true;
+    });
+  });
+
+  // Stats calculadas con los datos filtrados
+  currentStreak = computed(() => {
+    // La racha se mantiene del total
+    return this.totalDiaryStats().racha;
+  });
+
+  totalEmotions = computed(() => this.filteredEmotions().length);
+
+  completionRate = computed(() => {
+    const filtered = this.filteredTasks();
+    const total = filtered.length;
+    if (total === 0) return 0;
+    const completed = filtered.filter((t) => t.completada).length;
+    return Math.round((completed / total) * 100);
+  });
+
+  tasksCompleted = computed(() => {
+    return this.filteredTasks().filter((t) => t.completada).length;
+  });
+
+  totalTasks = computed(() => this.filteredTasks().length);
+
+  focusTime = computed(() => {
+    return this.filteredPomodoroSessions()
+      .filter((s) => s.completada)
+      .reduce((sum, s) => sum + s.duracion_minutos, 0);
+  });
+
+  pomodoroSessions = computed(() => {
+    return this.filteredPomodoroSessions().filter((s) => s.completada).length;
+  });
+
+  // Distribución de emociones con datos filtrados
   emotionDistribution = computed(() => {
-    const emotions = this.recentEmotions();
+    const emotions = this.filteredEmotions().slice(0, 7);
     const total = emotions.length;
 
     if (total === 0) return [];
 
-    // Contar cada tipo de emoción
     const counts = emotions.reduce((acc, e) => {
       acc[e.emocion] = (acc[e.emocion] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    // Convertir a array con porcentajes
     const distribution: EmotionStat[] = Object.entries(counts).map(([emotion, count]) => {
-      const config = this.emotionService.configuracionEmociones[emotion as keyof typeof this.emotionService.configuracionEmociones];
+      const config =
+        this.emotionService.configuracionEmociones[
+          emotion as keyof typeof this.emotionService.configuracionEmociones
+        ];
       return {
         emotion: config?.label || emotion,
         emoji: config?.emoji || '😐',
@@ -65,30 +209,26 @@ export class Dashboard {
       };
     });
 
-    // Ordenar por cantidad
     return distribution.sort((a, b) => b.count - a.count);
   });
 
-  // Racha actual (simplificado - días con al menos una emoción)
-  currentStreak = computed(() => this.diaryStats().racha);
+  toggleFilters(): void {
+    this.showFilters.update((v) => !v);
+  }
 
-  // Total de emociones
-  totalEmotions = computed(() => this.emotionStats().total);
+  clearFilters(): void {
+    this.startDate.set('');
+    this.endDate.set('');
+  }
 
-  // Tasa de completitud de tareas
-  completionRate = computed(() => this.taskStats().tasaCompletitud);
+  setQuickFilter(days: number): void {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
 
-  // Tareas completadas
-  tasksCompleted = computed(() => this.taskStats().completadas);
-
-  // Total de tareas
-  totalTasks = computed(() => this.taskStats().total);
-
-  // Tiempo de enfoque (minutos)
-  focusTime = computed(() => this.pomodoroStats().totalMinutes);
-
-  // Sesiones de pomodoro completadas
-  pomodoroSessions = computed(() => this.pomodoroStats().totalSesiones);
+    this.startDate.set(start.toISOString().split('T')[0]);
+    this.endDate.set(end.toISOString().split('T')[0]);
+  }
 
   formatDate(dateString: Date): string {
     const date = new Date(dateString);
@@ -124,4 +264,6 @@ export class Dashboard {
   getPreview(content: string, maxLength: number = 100): string {
     return content.length > maxLength ? content.substring(0, maxLength) + '...' : content;
   }
+
+  Math = Math;
 }

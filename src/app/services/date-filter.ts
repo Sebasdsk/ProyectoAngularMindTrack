@@ -29,12 +29,12 @@ export class DateFilterService {
 
   // Opciones de per�odo
   readonly periodOptions: PeriodOption[] = [
-    { value: 'week', label: 'Ultima semana', icon: 'U0001f4c5' },
-    { value: 'month', label: 'Ultimo mes', icon: 'U0001f4c6' },
-    { value: '3months', label: 'Ultimos 3 meses', icon: 'U0001f5d3\ufe0f' },
-    { value: '6months', label: 'Ultimos 6 meses', icon: 'U0001f4ca' },
-    { value: 'year', label: 'Ultimo año', icon: 'U0001f4c8' },
-    { value: 'all', label: 'Todo el tiempo', icon: 'U0001f30d' },
+    { value: 'week', label: 'Ultima semana', icon: '' },
+    { value: 'month', label: 'Ultimo mes', icon: '' },
+    { value: '3months', label: 'Ultimos 3 meses', icon: '\ufe0f' },
+    { value: '6months', label: 'Ultimos 6 meses', icon: '' },
+    { value: 'year', label: 'Ultimo año', icon: '' },
+    { value: 'all', label: 'Todo el tiempo', icon: '' },
     { value: 'custom', label: 'Personalizado', icon: '\u2699\ufe0f' },
   ];
 

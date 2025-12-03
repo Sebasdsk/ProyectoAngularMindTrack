@@ -1,14 +1,88 @@
 <!-- src/app/dashboard/dashboard.html -->
 <div class="p-4 md:p-6 space-y-6 animate-fadeIn">
 
-  <!-- Header -->
+  <!-- Header con Filtros -->
   <div class="mb-6">
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">
-      ¡Bienvenido de vuelta! 👋
-    </h1>
-    <p class="text-gray-600">
-      Aquí está tu resumen de bienestar
-    </p>
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">
+          ¡Bienvenido de vuelta! 👋
+        </h1>
+        <p class="text-gray-600">
+          Aquí está tu resumen de bienestar
+        </p>
+      </div>
+      <app-button
+        [variant]="'secondary'"
+        [size]="'sm'"
+        [icon]="showFilters() ? '✕' : '📅'"
+        (clicked)="toggleFilters()">
+        {{ showFilters() ? 'Ocultar' : 'Filtros' }}
+      </app-button>
+    </div>
+
+    <!-- Panel de Filtros -->
+    @if (showFilters()) {
+      <app-card [padding]="'md'" class="animate-fadeIn">
+        <div class="space-y-3">
+          <!-- Filtros Rápidos -->
+          <div class="flex flex-wrap gap-2">
+            <button
+              (click)="setQuickFilter(7)"
+              class="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg transition-colors">
+              Últimos 7 días
+            </button>
+            <button
+              (click)="setQuickFilter(30)"
+              class="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-lg transition-colors">
+              Últimos 30 días
+            </button>
+            <button
+              (click)="setQuickFilter(90)"
+              class="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg transition-colors">
+              Últimos 90 días
+            </button>
+            <button
+              (click)="clearFilters()"
+              class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition-colors">
+              Limpiar
+            </button>
+          </div>
+
+          <!-- Fechas Personalizadas -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Desde
+              </label>
+              <input
+                type="date"
+                [(ngModel)]="startDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Hasta
+              </label>
+              <input
+                type="date"
+                [(ngModel)]="endDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+              />
+            </div>
+          </div>
+
+          @if (startDate() || endDate()) {
+            <p class="text-sm text-gray-600">
+              Mostrando datos
+              @if (startDate()) { desde {{ startDate() }} }
+              @if (endDate()) { hasta {{ endDate() }} }
+            </p>
+          }
+        </div>
+      </app-card>
+    }
   </div>
 
   <!-- Stats Grid -->
@@ -61,13 +135,25 @@
         <h2 class="text-xl font-semibold text-gray-900">
           Distribución de Emociones
         </h2>
-        <p class="text-sm text-gray-600 mt-1">Últimas 7 emociones</p>
+        <p class="text-sm text-gray-600 mt-1">
+          @if (startDate() || endDate()) {
+            Período filtrado
+          } @else {
+            Últimas 7 emociones
+          }
+        </p>
       </div>
 
       @if (emotionDistribution().length === 0) {
         <div class="text-center py-8">
           <div class="text-4xl mb-2">😊</div>
-          <p class="text-gray-600 text-sm">Registra tus emociones para ver estadísticas</p>
+          <p class="text-gray-600 text-sm">
+            @if (startDate() || endDate()) {
+              No hay emociones en este período
+            } @else {
+              Registra tus emociones para ver estadísticas
+            }
+          </p>
           <a routerLink="/emotions" class="text-green-600 hover:text-green-700 font-medium text-sm mt-2 inline-block">
             Ir a Emociones →
           </a>
@@ -101,13 +187,25 @@
         <h2 class="text-xl font-semibold text-gray-900">
           Progreso de Tareas
         </h2>
-        <p class="text-sm text-gray-600 mt-1">Total</p>
+        <p class="text-sm text-gray-600 mt-1">
+          @if (startDate() || endDate()) {
+            Período filtrado
+          } @else {
+            Total
+          }
+        </p>
       </div>
 
       @if (totalTasks() === 0) {
         <div class="text-center py-8">
           <div class="text-4xl mb-2">📝</div>
-          <p class="text-gray-600 text-sm">Crea tareas para ver tu progreso</p>
+          <p class="text-gray-600 text-sm">
+            @if (startDate() || endDate()) {
+              No hay tareas en este período
+            } @else {
+              Crea tareas para ver tu progreso
+            }
+          </p>
           <a routerLink="/tasks" class="text-green-600 hover:text-green-700 font-medium text-sm mt-2 inline-block">
             Ir a Tareas →
           </a>
@@ -115,7 +213,6 @@
       } @else {
         <div class="flex items-center justify-center py-8">
           <div class="relative w-48 h-48">
-            <!-- Circle Progress -->
             <svg class="w-full h-full transform -rotate-90">
               <circle
                 cx="96"
@@ -176,19 +273,19 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().total }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ totalDiaryStats().total }}</p>
           <p class="text-xs text-gray-600 mt-1">Entradas totales</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().estaSemana }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ totalDiaryStats().estaSemana }}</p>
           <p class="text-xs text-gray-600 mt-1">Esta semana</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().esteMes }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ totalDiaryStats().esteMes }}</p>
           <p class="text-xs text-gray-600 mt-1">Este mes</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ diaryStats().favoritos }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ totalDiaryStats().favoritos }}</p>
           <p class="text-xs text-gray-600 mt-1">Favoritos</p>
         </div>
       </div>
@@ -202,7 +299,13 @@
             <h2 class="text-xl font-semibold text-gray-900">
               Enfoque ⏱️
             </h2>
-            <p class="text-sm text-gray-600 mt-1">Tus sesiones Pomodoro</p>
+            <p class="text-sm text-gray-600 mt-1">
+              @if (startDate() || endDate()) {
+                Período filtrado
+              } @else {
+                Tus sesiones Pomodoro
+              }
+            </p>
           </div>
           <a
             routerLink="/focus"
@@ -214,19 +317,19 @@
 
       <div class="grid grid-cols-2 gap-4">
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().totalSesiones }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ pomodoroSessions() }}</p>
           <p class="text-xs text-gray-600 mt-1">Sesiones</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().totalHoras }}</p>
-          <p class="text-xs text-gray-600 mt-1">Horas totales</p>
+          <p class="text-2xl font-bold text-gray-900">{{ Math.floor(focusTime() / 60) }}</p>
+          <p class="text-xs text-gray-600 mt-1">Horas</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().estaSemana }}</p>
-          <p class="text-xs text-gray-600 mt-1">Esta semana</p>
+          <p class="text-2xl font-bold text-gray-900">{{ focusTime() }}</p>
+          <p class="text-xs text-gray-600 mt-1">Minutos totales</p>
         </div>
         <div class="text-center p-4 bg-gray-50 rounded-lg">
-          <p class="text-2xl font-bold text-gray-900">{{ pomodoroStats().promedioDiario }}</p>
+          <p class="text-2xl font-bold text-gray-900">{{ totalPomodoroStats().promedioDiario }}</p>
           <p class="text-xs text-gray-600 mt-1">Min/día promedio</p>
         </div>
       </div>
@@ -235,7 +338,7 @@
   </div>
 
   <!-- Recent Journal Entries -->
-  @if (recentJournalEntries().length > 0) {
+  @if (filteredJournalEntries().length > 0) {
     <app-card [padding]="'lg'">
       <div header>
         <div class="flex items-center justify-between">
@@ -254,7 +357,7 @@
       </div>
 
       <div class="space-y-3">
-        @for (entry of recentJournalEntries(); track entry.id) {
+        @for (entry of filteredJournalEntries(); track entry.id) {
           <div class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1 min-w-0">
