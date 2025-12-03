@@ -24,6 +24,11 @@
     </div>
   }
 
+  <!-- Filtro de Fechas -->
+  <div class="mb-6">
+    <app-date-filter (periodChanged)="onFilterChange($event)"></app-date-filter>
+  </div>
+
   <!-- Registro de Emoción -->
   <app-card [padding]="'lg'">
     <div header>

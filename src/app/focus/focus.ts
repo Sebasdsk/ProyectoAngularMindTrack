@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { Card } from '../shared/card/card';
 import { Button } from '../shared/button/button';
-import { Input } from '../shared/input/input';
 import { Badge } from '../shared/badge/badge';
 import { PomodoroService } from '../services/focus';
 
@@ -44,12 +43,8 @@ export class Focus implements OnDestroy {
   private timerInterval: any = null;
 
   constructor() {
-    // Actualizar timeLeft cuando cambie el modo
-    effect(() => {
-      if (!this.isRunning()) {
-        this.resetTimer();
-      }
-    });
+    // NO resetear cuando cambie el modo si est� corriendo
+    // El reset solo debe ocurrir cuando el usuario lo pida expl�citamente
   }
 
   ngOnDestroy(): void {
@@ -100,21 +95,22 @@ export class Focus implements OnDestroy {
   getModeIcon(mode: TimerMode): string {
     switch (mode) {
       case 'focus':
-        return '🎯';
+        return 'U0001f3af';
       case 'shortBreak':
-        return '☕';
+        return '\u2615';
       case 'longBreak':
-        return '🌴';
+        return 'U0001f334';
     }
   }
 
   async startTimer(): Promise<void> {
     if (this.isRunning()) return;
 
-    // Crear sesión en BD si es modo focus
+    // Crear sesi�n en BD si es modo focus y no hay sesi�n activa
     if (this.currentMode() === 'focus' && !this.currentSessionId()) {
       const result = await this.pomodoroService.startSession(
-        this.getDurationForMode(this.currentMode())
+        this.getDurationForMode(this.currentMode()),
+        this.shortBreakDuration()
       );
 
       if (result.success && result.session) {
@@ -133,6 +129,7 @@ export class Focus implements OnDestroy {
   }
 
   pauseTimer(): void {
+    // IMPORTANTE: Solo pausar, NO resetear
     this.isRunning.set(false);
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
@@ -150,17 +147,17 @@ export class Focus implements OnDestroy {
   async completeSession(): Promise<void> {
     this.pauseTimer();
 
-    // Marcar sesión como completada si es focus
+    // Marcar sesi�n como completada si es focus
     const sessionId = this.currentSessionId();
     if (this.currentMode() === 'focus' && sessionId) {
       await this.pomodoroService.completeSession(sessionId);
       this.currentSessionId.set(null);
     }
 
-    // Cambiar automáticamente al siguiente modo
+    // Cambiar autom�ticamente al siguiente modo
     this.autoSwitchMode();
 
-    // Mostrar notificación
+    // Mostrar notificaci�n
     this.showNotification();
   }
 
@@ -169,7 +166,7 @@ export class Focus implements OnDestroy {
     const completedSessions = this.stats().totalSesiones;
 
     if (current === 'focus') {
-      // Después de 4 sesiones de enfoque, tomar descanso largo
+      // Despu�s de 4 sesiones de enfoque, tomar descanso largo
       if (completedSessions > 0 && completedSessions % 4 === 0) {
         this.switchMode('longBreak');
       } else {
@@ -181,15 +178,17 @@ export class Focus implements OnDestroy {
   }
 
   switchMode(mode: TimerMode): void {
+    // Solo pausar y cambiar modo, resetear el tiempo
     this.pauseTimer();
     this.currentMode.set(mode);
-    this.resetTimer();
+    const duration = this.getDurationForMode(mode);
+    this.timeLeft.set(duration * 60);
   }
 
   showNotification(): void {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Pomodoro Timer', {
-        body: `¡${this.getModeLabel(this.currentMode())} completado!`,
+        body: `�${this.getModeLabel(this.currentMode())} completado!`,
         icon: this.getModeIcon(this.currentMode()),
       });
     }
@@ -257,18 +256,5 @@ export class Focus implements OnDestroy {
       day: 'numeric',
       month: 'short',
     });
-  }
-
-  getSessionTypeLabel(tipo: string): string {
-    switch (tipo) {
-      case 'trabajo':
-        return 'Enfoque';
-      case 'descanso_corto':
-        return 'Descanso Corto';
-      case 'descanso_largo':
-        return 'Descanso Largo';
-      default:
-        return tipo;
-    }
   }
 }

@@ -4,7 +4,9 @@ import { Card } from '../shared/card/card';
 import { Button } from '../shared/button/button';
 import { Textarea } from '../shared/textarea/textarea';
 import { Badge } from '../shared/badge/badge';
+import { DateFilter } from '../shared/date-filter/date-filter';
 import { EmotionService, TipoEmocion } from '../services/emotion';
+import { DateFilterService, PeriodFilter } from '../services/date-filter';
 
 interface Emotion {
   id: string;
@@ -16,13 +18,22 @@ interface Emotion {
 
 @Component({
   selector: 'app-emotions',
-  imports: [Card, Button, Textarea, Badge],
+  imports: [Card, Button, Textarea, Badge, DateFilter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './emotions.html',
   styleUrl: './emotions.css',
 })
 export class Emotions {
   private emotionService = inject(EmotionService);
+  dateFilterService = inject(DateFilterService);
+
+  // Loading state
+  isLoading = signal(true);
+
+  constructor() {
+    // Simular carga inicial
+    setTimeout(() => this.isLoading.set(false), 800);
+  }
 
   // Emociones disponibles
   emotions: Emotion[] = [
@@ -85,8 +96,35 @@ export class Emotions {
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
-  // Datos del servicio
-  emotionHistory = this.emotionService.recentEmotions;
+  // Historial de emociones (filtrado por fecha)
+  emotionHistory = computed(() => {
+    const allEmotions = this.emotionService.emotions();
+    return this.dateFilterService.filterByDateField(allEmotions, 'fecha_registro');
+  });
+
+  // Stats filtradas
+  filteredStats = computed(() => {
+    const filtered = this.emotionHistory();
+    const total = filtered.length;
+
+    if (total === 0) return { total: 0, positivas: 0, negativas: 0 };
+
+    const positivas = filtered.filter((e) =>
+      ['feliz', 'emocionado', 'tranquilo'].includes(e.emocion)
+    ).length;
+
+    const negativas = filtered.filter((e) =>
+      ['triste', 'enojado', 'ansioso'].includes(e.emocion)
+    ).length;
+
+    return {
+      total,
+      positivas,
+      negativas,
+      porcentajePositivas: Math.round((positivas / total) * 100),
+      porcentajeNegativas: Math.round((negativas / total) * 100),
+    };
+  });
 
   selectEmotion(emotion: Emotion): void {
     this.selectedEmotion.set(emotion);
@@ -169,5 +207,11 @@ export class Emotions {
 
   getEmotionConfig(tipo: TipoEmocion): Emotion | undefined {
     return this.emotions.find((e) => e.tipo === tipo);
+  }
+
+  onFilterChange(period?: PeriodFilter): void {
+    // El computed ya se recalcula automáticamente cuando DateFilterService cambia.
+    // Recibimos el periodo opcionalmente por si queremos reaccionar específicamente.
+    console.log('Filtro cambiado', period);
   }
 }

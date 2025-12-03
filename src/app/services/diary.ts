@@ -1,4 +1,4 @@
-// src/app/services/diary.service.ts
+// src/app/services/diary.ts
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { SupabaseService } from './supabase';
 import { AuthService } from './auth';
@@ -10,7 +10,7 @@ export interface EntradaDiario {
   contenido: string;
   prompt?: string;
   emocion?: string;
-  etiquetas?: string[];
+  // etiquetas ELIMINADO - no existe en la BD
   es_favorito: boolean;
   fecha_creacion: Date;
   fecha_actualizacion: Date;
@@ -111,7 +111,7 @@ export class DiaryService {
     options?: {
       prompt?: string;
       emocion?: string;
-      etiquetas?: string[];
+      // etiquetas ELIMINADO
     }
   ): Promise<{ success: boolean; entry?: EntradaDiario; error?: string }> {
     try {
@@ -122,6 +122,7 @@ export class DiaryService {
         return { success: false, error: 'El título y contenido son requeridos' };
       }
 
+      // CORRECCIÓN: Removemos etiquetas del insert
       const { data, error } = await this.supabase.client
         .from('diario')
         .insert({
@@ -130,7 +131,7 @@ export class DiaryService {
           contenido: contenido.trim(),
           prompt: options?.prompt,
           emocion: options?.emocion,
-          etiquetas: options?.etiquetas || [],
+          // etiquetas: ELIMINADO
         })
         .select()
         .single();
@@ -145,10 +146,10 @@ export class DiaryService {
           contenido: data.contenido,
           prompt: data.prompt,
           emocion: data.emocion,
-          etiquetas: data.etiquetas,
+          // etiquetas: ELIMINADO
           es_favorito: data.es_favorito || false,
-          fecha_creacion: new Date(data.fecha_creacion),
-          fecha_actualizacion: new Date(data.fecha_actualizacion),
+          fecha_creacion: new Date(data.created_at),
+          fecha_actualizacion: new Date(data.updated_at),
         };
         this.entriesSignal.update((entries) => [...entries, newEntry]);
         return { success: true, entry: newEntry };
@@ -162,7 +163,7 @@ export class DiaryService {
 
   async updateEntry(
     entryId: string,
-    updates: Partial<Pick<EntradaDiario, 'titulo' | 'contenido' | 'etiquetas' | 'es_favorito'>>
+    updates: Partial<Pick<EntradaDiario, 'titulo' | 'contenido' | 'es_favorito'>>
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const { error } = await this.supabase.client
@@ -170,8 +171,8 @@ export class DiaryService {
         .update({
           titulo: updates.titulo,
           contenido: updates.contenido,
-          etiquetas: updates.etiquetas,
           es_favorito: updates.es_favorito,
+          // etiquetas: ELIMINADO
         })
         .eq('id', entryId);
 
@@ -218,7 +219,7 @@ export class DiaryService {
         .from('diario')
         .select('*')
         .eq('usuario_id', user.id)
-        .order('fecha_creacion', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -230,10 +231,10 @@ export class DiaryService {
           contenido: e.contenido,
           prompt: e.prompt,
           emocion: e.emocion,
-          etiquetas: e.etiquetas,
+          // etiquetas: ELIMINADO
           es_favorito: e.es_favorito || false,
-          fecha_creacion: new Date(e.fecha_creacion),
-          fecha_actualizacion: new Date(e.fecha_actualizacion),
+          fecha_creacion: new Date(e.created_at),
+          fecha_actualizacion: new Date(e.updated_at),
         }));
         this.entriesSignal.set(entries);
       }
@@ -248,20 +249,11 @@ export class DiaryService {
 
     return this.recentEntries().filter(
       (entry) =>
-        entry.titulo.toLowerCase().includes(term) ||
-        entry.contenido.toLowerCase().includes(term) ||
-        entry.etiquetas?.some((tag) => tag.toLowerCase().includes(term))
+        entry.titulo.toLowerCase().includes(term) || entry.contenido.toLowerCase().includes(term)
     );
   }
 
-  getEntriesByTag(tag: string): EntradaDiario[] {
-    return this.recentEntries().filter((entry) => entry.etiquetas?.includes(tag));
-  }
-
-  getAllTags(): string[] {
-    const allTags = this.entriesSignal().flatMap((entry) => entry.etiquetas || []);
-    return [...new Set(allTags)].sort();
-  }
+  // Métodos de etiquetas ELIMINADOS ya que no existen en BD
 
   getEntriesThisWeek(): EntradaDiario[] {
     const now = new Date();
